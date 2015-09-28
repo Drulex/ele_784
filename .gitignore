@@ -1,0 +1,9 @@
+*.o
+*.cmd
+*.cproject
+*.ko
+*.mod.*
+references/
+*.order
+*.symvers
+lab2/src/.tmp_versions/
