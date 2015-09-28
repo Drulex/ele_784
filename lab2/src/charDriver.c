@@ -64,10 +64,44 @@ static struct file_operations charDriver_fops = {
 module_init(charDriver_init);
 module_exit(charDriver_exit);
 
+//dev_t devno;
+struct class *charDriver_class;
+struct cdev charDriver_cdev;
 
 
 
 static int __init charDriver_init(void) {
+
+	// 1) init dev_t: must be declared outside the init
+	// 2) class_create
+	// 3) device_create
+	// 4) cdev_init
+	// 5) cdev_add
+
+	charDriverDev *charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
+	//DEFINE_SEMAPHORE(&charStruct->SemBuf);
+
+	int result;
+
+	result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
+	if(result < 0)
+		printk(KERN_WARNING"charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+	else
+		printk(KERN_WARNING"charDriver : MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
+
+	charDriver_class = class_create(THIS_MODULE, "charDriverClass");
+
+	device_create(charDriver_class, NULL, charStruct->dev, NULL, "HelloDev_Node");
+	cdev_init(&charDriver_cdev, &charDriver_fops);
+
+	charDriver_cdev.owner = THIS_MODULE;
+
+	if (cdev_add(&charDriver_cdev, charStruct->dev, 1) < 0)
+		printk(KERN_WARNING"charDriver ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+
+	return 0;
+
+
     printk(KERN_ERR     "This is a kernel error message...\n");
     printk(KERN_WARNING "This is a kernel warning message...\n");
     printk(KERN_NOTICE  "This is a kernel notice message...\n");
