@@ -38,7 +38,7 @@ typedef struct {
 } charDriverDev;
 
 // Module Information
-MODULE_AUTHOR("prenom nom #1, prenom nom #2");
+MODULE_AUTHOR("JORA Alexandru, MUKANDILA, Mukandila");
 MODULE_LICENSE("Dual BSD/GPL");
 
 // Prototypes
@@ -64,11 +64,9 @@ static struct file_operations charDriver_fops = {
 module_init(charDriver_init);
 module_exit(charDriver_exit);
 
-//dev_t devno;
 struct class *charDriver_class;
 struct cdev charDriver_cdev;
-
-
+charDriverDev *charStruct;
 
 static int __init charDriver_init(void) {
 
@@ -78,20 +76,26 @@ static int __init charDriver_init(void) {
 	// 4) cdev_init
 	// 5) cdev_add
 
-	charDriverDev *charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
+	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
+	if(!charStruct)
+		printk(KERN_WARNING"===charDriver ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	//DEFINE_SEMAPHORE(&charStruct->SemBuf);
 
 	int result;
 
 	result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
 	if(result < 0)
-		printk(KERN_WARNING"charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printk(KERN_WARNING"===charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	else
-		printk(KERN_WARNING"charDriver : MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
-
+		printk(KERN_WARNING"===charDriver : MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
+	
+	printk(KERN_WARNING"===charDriver: Creating charDriver Class\n");
 	charDriver_class = class_create(THIS_MODULE, "charDriverClass");
+	
+	printk(KERN_WARNING"===charDriver: Creating charDriver_Node\n");
+	device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
-	device_create(charDriver_class, NULL, charStruct->dev, NULL, "HelloDev_Node");
+	printk(KERN_WARNING"===charDriver: cdev INIT\n");
 	cdev_init(&charDriver_cdev, &charDriver_fops);
 
 	charDriver_cdev.owner = THIS_MODULE;
@@ -101,19 +105,19 @@ static int __init charDriver_init(void) {
 
 	return 0;
 
-
-    printk(KERN_ERR     "This is a kernel error message...\n");
-    printk(KERN_WARNING "This is a kernel warning message...\n");
-    printk(KERN_NOTICE  "This is a kernel notice message...\n");
-    printk(KERN_INFO    "This is a kernel info message...\n");
-    printk(KERN_DEBUG   "This is a kernel debug message...\n");
-
-    return 0;
 }
 
 
 static void __exit charDriver_exit(void) {
-
+	
+	printk(KERN_WARNING"===charDriver: cdev DELETE\n");
+	cdev_del(&charDriver_cdev);
+	printk(KERN_WARNING"==charDriver: charDriver_class DEVICE DELETE\n");
+	device_destroy(charDriver_class, charStruct->dev);
+	printk(KERN_WARNING"===charDriver: charDriver_class DELETE\n");
+	class_destroy(charDriver_class);
+	printk(KERN_WARNING"===charDriver: charStruct devno DELETE\n");
+	unregister_chrdev_region(charStruct->dev, 1);
 }
 
 
