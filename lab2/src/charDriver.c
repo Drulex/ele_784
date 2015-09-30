@@ -118,6 +118,8 @@ static void __exit charDriver_exit(void) {
 	class_destroy(charDriver_class);
 	printk(KERN_WARNING"===charDriver: charStruct devno DELETE\n");
 	unregister_chrdev_region(charStruct->dev, 1);
+	printk(KERN_WARNING"===charDriver: charStruct kfree()\n");
+	kfree(charStruct);
 }
 
 
