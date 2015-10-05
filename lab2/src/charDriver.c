@@ -65,6 +65,7 @@ module_init(charDriver_init);
 module_exit(charDriver_exit);
 
 struct class *charDriver_class;
+// shouldn't we use struct cdev within struct charStruct?
 struct cdev charDriver_cdev;
 charDriverDev *charStruct;
 
@@ -76,6 +77,7 @@ static int __init charDriver_init(void) {
 	// 4) cdev_init
 	// 5) cdev_add
     // 6) init all sempahores
+    // 7) init r/w buffers
 
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
@@ -105,6 +107,10 @@ static int __init charDriver_init(void) {
 
     // initialize mutex type semaphore for buffer
     sema_init(&charStruct->SemBuf, 1);
+
+    // init read/write buffers
+    charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
+    charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
 
 	return 0;
 
