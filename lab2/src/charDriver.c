@@ -145,15 +145,19 @@ static void __exit charDriver_exit(void) {
 
 static int charDriver_open(struct inode *inode, struct file *flip) {
     printk(KERN_WARNING "===charDriver: entering OPEN function\n");
+    printk(KERN_WARNING "=== charDriver: f_flags=%u\n", flip->f_flags);
 
     // check opening mode
-    switch(flip->f_flags){
+    switch(flip->f_flags & O_ACCMODE){
 
         case O_RDONLY:
             // read only
+            printk(KERN_WARNING "===charDriver: opened in O_RDONLY\n");
+            break;
 
         case O_WRONLY:
             // write only
+            printk(KERN_WARNING "===charDriver: opened in O_WRONLY\n");
 
             // capture semaphore
             if (down_interruptible(&charStruct->SemBuf)){
@@ -165,10 +169,11 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // release semaphore
             up(&charStruct->SemBuf);
-
+            break;
 
         case O_RDWR:
             // read/write
+            printk(KERN_WARNING "===charDriver: opened in O_RDWR\n");
 
             // capture semaphore
             if (down_interruptible(&charStruct->SemBuf)){
@@ -180,6 +185,11 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // release semaphore
             up(&charStruct->SemBuf);
+            break;
+
+        default:
+            printk(KERN_WARNING "===charDriver: unknown access mode!!\n");
+            break;
     }
     return 0;
 }
