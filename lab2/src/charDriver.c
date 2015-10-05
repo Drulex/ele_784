@@ -1,7 +1,7 @@
 /*
  * File         : ele784-lab1.c
  * Description  : ELE784 Lab1 source
- * 
+ *
  * Etudiants:  XXXX00000000 (prenom nom #1)
  *             XXXX00000000 (prenom nom #2)
  */
@@ -88,10 +88,10 @@ static int __init charDriver_init(void) {
 		printk(KERN_WARNING"===charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	else
 		printk(KERN_WARNING"===charDriver : MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
-	
+
 	printk(KERN_WARNING"===charDriver: Creating charDriver Class\n");
 	charDriver_class = class_create(THIS_MODULE, "charDriverClass");
-	
+
 	printk(KERN_WARNING"===charDriver: Creating charDriver_Node\n");
 	device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
@@ -112,7 +112,7 @@ static int __init charDriver_init(void) {
 
 
 static void __exit charDriver_exit(void) {
-	
+
 	printk(KERN_WARNING"===charDriver: cdev DELETE\n");
 	cdev_del(&charDriver_cdev);
 	printk(KERN_WARNING"==charDriver: charDriver_class DEVICE DELETE\n");
@@ -127,6 +127,42 @@ static void __exit charDriver_exit(void) {
 
 
 static int charDriver_open(struct inode *inode, struct file *flip) {
+
+    // check opening mode
+    switch(flip->f_flags){
+
+        case O_RDONLY:
+            // read only
+
+        case O_WRONLY:
+            // write only
+
+            // capture semaphore
+            if (down_interruptible(&charStruct->SemBuf)){
+                return -ENOTTY
+            }
+
+            // critical region
+
+
+            // release semaphore
+            up(&charStruct->SemBuf);
+
+
+        case O_RDWR:
+            // read/write
+
+            // capture semaphore
+            if (down_interruptible(&charStruct->SemBuf)){
+                return -ENOTTY
+            }
+
+            // critical region
+
+
+            // release semaphore
+            up(&charStruct->SemBuf);
+    }
     return 0;
 }
 
