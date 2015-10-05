@@ -65,8 +65,6 @@ module_init(charDriver_init);
 module_exit(charDriver_exit);
 
 struct class *charDriver_class;
-// shouldn't we use struct cdev within struct charStruct?
-//struct cdev charDriver_cdev;
 charDriverDev *charStruct;
 
 static int __init charDriver_init(void) {
@@ -78,6 +76,7 @@ static int __init charDriver_init(void) {
 	// 5) cdev_add
     // 6) init all sempahores
     // 7) init r/w buffers
+    // 8)
 
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
@@ -111,6 +110,8 @@ static int __init charDriver_init(void) {
     charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
     charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
 
+
+
 	return 0;
 
 }
@@ -127,6 +128,8 @@ static void __exit charDriver_exit(void) {
 	printk(KERN_WARNING"===charDriver: charStruct devno DELETE\n");
 	unregister_chrdev_region(charStruct->dev, 1);
 	printk(KERN_WARNING"===charDriver: charStruct kfree()\n");
+    kfree(charStruct->ReadBuf);
+    kfree(charStruct->WriteBuf);
 	kfree(charStruct);
 }
 
