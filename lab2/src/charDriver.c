@@ -127,6 +127,7 @@ static void __exit charDriver_exit(void) {
 
 
 static int charDriver_open(struct inode *inode, struct file *flip) {
+    printk(KERN_WARNING "===charDriver: calling .open function\n");
 
     // check opening mode
     switch(flip->f_flags){
@@ -139,7 +140,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // capture semaphore
             if (down_interruptible(&charStruct->SemBuf)){
-                return -ENOTTY
+                return -ENOTTY;
             }
 
             // critical region
@@ -154,7 +155,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // capture semaphore
             if (down_interruptible(&charStruct->SemBuf)){
-                return -ENOTTY
+                return -ENOTTY;
             }
 
             // critical region
