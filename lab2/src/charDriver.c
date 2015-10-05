@@ -66,7 +66,7 @@ module_exit(charDriver_exit);
 
 struct class *charDriver_class;
 // shouldn't we use struct cdev within struct charStruct?
-struct cdev charDriver_cdev;
+//struct cdev charDriver_cdev;
 charDriverDev *charStruct;
 
 static int __init charDriver_init(void) {
@@ -83,9 +83,7 @@ static int __init charDriver_init(void) {
 	if(!charStruct)
 		printk(KERN_WARNING"===charDriver ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-	int result;
-
-	result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
+	int result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
 	if(result < 0)
 		printk(KERN_WARNING"===charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	else
@@ -98,13 +96,14 @@ static int __init charDriver_init(void) {
 	device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
 	printk(KERN_WARNING"===charDriver: cdev INIT\n");
-	cdev_init(&charDriver_cdev, &charDriver_fops);
+	cdev_init(&charStruct->cdev, &charDriver_fops);
 
-	charDriver_cdev.owner = THIS_MODULE;
+	charStruct->cdev.owner = THIS_MODULE;
 
-	if (cdev_add(&charDriver_cdev, charStruct->dev, 1) < 0)
+	if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
 		printk(KERN_WARNING"charDriver ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
+    printk(KERN_WARNING "===charDriver initializing semaphores and R/W buffers\n");
     // initialize mutex type semaphore for buffer
     sema_init(&charStruct->SemBuf, 1);
 
@@ -120,7 +119,7 @@ static int __init charDriver_init(void) {
 static void __exit charDriver_exit(void) {
 
 	printk(KERN_WARNING"===charDriver: cdev DELETE\n");
-	cdev_del(&charDriver_cdev);
+	cdev_del(&charStruct->cdev);
 	printk(KERN_WARNING"==charDriver: charDriver_class DEVICE DELETE\n");
 	device_destroy(charDriver_class, charStruct->dev);
 	printk(KERN_WARNING"===charDriver: charDriver_class DELETE\n");
