@@ -67,6 +67,8 @@ module_exit(charDriver_exit);
 struct class *charDriver_class;
 charDriverDev *charStruct;
 
+BufferHandle_t Buffer;
+
 static int __init charDriver_init(void) {
 
 	// 1) init dev_t: must be declared outside the init
@@ -110,7 +112,8 @@ static int __init charDriver_init(void) {
     charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
     charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
 
-
+    // init circular buffer
+    Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
 	return 0;
 
@@ -121,7 +124,7 @@ static void __exit charDriver_exit(void) {
 
 	printk(KERN_WARNING"===charDriver: cdev DELETE\n");
 	cdev_del(&charStruct->cdev);
-	printk(KERN_WARNING"==charDriver: charDriver_class DEVICE DELETE\n");
+	printk(KERN_WARNING"===charDriver: charDriver_class DEVICE DELETE\n");
 	device_destroy(charDriver_class, charStruct->dev);
 	printk(KERN_WARNING"===charDriver: charDriver_class DELETE\n");
 	class_destroy(charDriver_class);
@@ -131,6 +134,12 @@ static void __exit charDriver_exit(void) {
     kfree(charStruct->ReadBuf);
     kfree(charStruct->WriteBuf);
 	kfree(charStruct);
+    if(circularBufferDelete(Buffer)){
+        printk(KERN_WARNING "===charDriver: Unable to delete circular buffer\n");
+    }
+    else{
+        printk(KERN_WARNING "===charDriver: deleting circular buffer\n");
+    }
 }
 
 
