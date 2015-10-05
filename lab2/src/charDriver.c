@@ -127,7 +127,7 @@ static void __exit charDriver_exit(void) {
 
 
 static int charDriver_open(struct inode *inode, struct file *flip) {
-    printk(KERN_WARNING "===charDriver: calling .open function\n");
+    printk(KERN_WARNING "===charDriver: entering OPEN function\n");
 
     // check opening mode
     switch(flip->f_flags){
@@ -169,20 +169,24 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
 
 static int charDriver_release(struct inode *inode, struct file *flip) {
+    printk(KERN_WARNING "===charDriver: entering RELEASE function\n");
     return 0;
 }
 
 
 static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops) {
+    printk(KERN_WARNING "===charDriver: entering READ function\n");
     return 0;
 }
 
 
 static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size_t count, loff_t *f_ops) {
+    printk(KERN_WARNING "===charDriver: entering WRITE function\n");
     return 0;
 }
 
 
 static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long arg) {
+    printk(KERN_WARNING "===charDriver: entering IOCTL function\n");
     return 0;
 }
