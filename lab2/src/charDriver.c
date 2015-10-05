@@ -75,11 +75,11 @@ static int __init charDriver_init(void) {
 	// 3) device_create
 	// 4) cdev_init
 	// 5) cdev_add
+    // 6) init all sempahores
 
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
 		printk(KERN_WARNING"===charDriver ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-	//DEFINE_SEMAPHORE(&charStruct->SemBuf);
 
 	int result;
 
@@ -102,6 +102,9 @@ static int __init charDriver_init(void) {
 
 	if (cdev_add(&charDriver_cdev, charStruct->dev, 1) < 0)
 		printk(KERN_WARNING"charDriver ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+
+    // initialize mutex type semaphore for buffer
+    sema_init(&charStruct->SemBuf, 1);
 
 	return 0;
 
