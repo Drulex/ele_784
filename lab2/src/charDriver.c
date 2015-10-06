@@ -161,11 +161,11 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // only open in O_WRONLY if there are no writers already
             if (!charStruct->numWriter){
-                down_interruptible(&charStruct->SemBuf)
+                down_interruptible(&charStruct->SemBuf);
                 charStruct->numWriter++;
             }
             else
-                return -ENOTTY
+                return -ENOTTY;
 
             break;
 
@@ -175,12 +175,12 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
             // only open in O_RDWR if there are no writers already
             if (!charStruct->numWriter){
-                down_interruptible(&charStruct->SemBuf)
+                down_interruptible(&charStruct->SemBuf);
                 charStruct->numWriter++;
                 charStruct->numReader++;
             }
             else
-                return -ENOTTY
+                return -ENOTTY;
 
             break;
 
