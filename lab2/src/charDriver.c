@@ -103,9 +103,9 @@ static int __init charDriver_init(void) {
 	charStruct->cdev.owner = THIS_MODULE;
 
 	if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
-		printk(KERN_WARNING"charDriver ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printk(KERN_WARNING"charDriver: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-	printk(KERN_WARNING "===charDriver initializing semaphores and R/W buffers\n");
+	printk(KERN_WARNING "===charDriver: initializing semaphores and R/W buffers\n");
 	// initialize mutex type semaphore for buffer
 	sema_init(&charStruct->SemBuf, 1);
 
