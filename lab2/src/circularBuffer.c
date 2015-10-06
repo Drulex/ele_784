@@ -20,7 +20,7 @@ BufferHandle_t circularBufferInit(unsigned int size) {
     Buffer_t* newBuffer = NULL;
     // Allocate memory for main structure
 #ifdef __KERNEL__
-    newBuffer = (Buffer_t*) kmalloc(sizeof(Buffer_t), GFP_KERNEL);
+    newBuffer =  kmalloc(sizeof(Buffer_t), GFP_KERNEL);
 #else
     newBuffer = (Buffer_t*) malloc(sizeof(Buffer_t));
 #endif

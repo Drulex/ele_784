@@ -76,9 +76,9 @@ static int __init charDriver_init(void) {
 	// 3) device_create
 	// 4) cdev_init
 	// 5) cdev_add
-    // 6) init all sempahores
-    // 7) init r/w buffers
-    // 8)
+	// 6) init all sempahores
+	// 7) init r/w buffers
+	// 8)
 
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
@@ -104,16 +104,16 @@ static int __init charDriver_init(void) {
 	if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
 		printk(KERN_WARNING"charDriver ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-    printk(KERN_WARNING "===charDriver initializing semaphores and R/W buffers\n");
-    // initialize mutex type semaphore for buffer
-    sema_init(&charStruct->SemBuf, 1);
+	printk(KERN_WARNING "===charDriver initializing semaphores and R/W buffers\n");
+	// initialize mutex type semaphore for buffer
+	sema_init(&charStruct->SemBuf, 1);
 
-    // init read/write buffers
-    charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
-    charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
+	// init read/write buffers
+	charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
+	charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
 
-    // init circular buffer
-    Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+	// init circular buffer
+	Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
 	return 0;
 
@@ -131,15 +131,14 @@ static void __exit charDriver_exit(void) {
 	printk(KERN_WARNING"===charDriver: charStruct devno DELETE\n");
 	unregister_chrdev_region(charStruct->dev, 1);
 	printk(KERN_WARNING"===charDriver: charStruct kfree()\n");
-    kfree(charStruct->ReadBuf);
-    kfree(charStruct->WriteBuf);
+	kfree(charStruct->ReadBuf);
+	kfree(charStruct->WriteBuf);
 	kfree(charStruct);
-    if(circularBufferDelete(Buffer)){
-        printk(KERN_WARNING "===charDriver: Unable to delete circular buffer\n");
-    }
-    else{
-        printk(KERN_WARNING "===charDriver: deleting circular buffer\n");
-    }
+
+	if(circularBufferDelete(Buffer))
+        	printk(KERN_WARNING "===charDriver: Unable to delete circular buffer\n");
+	else
+        	printk(KERN_WARNING "===charDriver: deleting circular buffer\n");
 }
 
 
