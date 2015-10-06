@@ -110,8 +110,8 @@ static int __init charDriver_init(void) {
 	sema_init(&charStruct->SemBuf, 1);
 
 	// init read/write buffers
-	charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
-	charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE, GFP_KERNEL);
+	charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
+	charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
 
 	// init circular buffer
 	Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
