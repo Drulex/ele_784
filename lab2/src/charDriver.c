@@ -2,7 +2,7 @@
  * File         : ele784-lab1.c
  * Description  : ELE784 Lab1 source
  *
- * Etudiants:  XXXX00000000 (prenom nom #1)
+ * Etudiants:  JORA09019100 (Alexandru Jora)
  *             XXXX00000000 (prenom nom #2)
  */
 
@@ -78,7 +78,7 @@ static int __init charDriver_init(void) {
 	// 5) cdev_add
 	// 6) init all sempahores
 	// 7) init r/w buffers
-	// 8)
+	// 8) init circular buffer
 
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
