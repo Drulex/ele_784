@@ -159,14 +159,14 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
             // write only
             printk(KERN_WARNING "===charDriver: opened in O_WRONLY\n");
 
-            // capture semaphore
-            if (down_interruptible(&charStruct->SemBuf)){
-                return -ENOTTY;
+            // only open in O_WRONLY if there are no writers already
+            if (!charStruct->numWriter){
+                down_interruptible(&charStruct->SemBuf)
+                charStruct->numWriter++;
             }
+            else
+                return -ENOTTY
 
-            charStruct->numWriter++;
-
-            // critical region
             break;
 
         case O_RDWR:
@@ -174,14 +174,14 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
             printk(KERN_WARNING "===charDriver: opened in O_RDWR\n");
             charStruct->numReader++;
 
-            // capture semaphore
-            if (down_interruptible(&charStruct->SemBuf)){
-                return -ENOTTY;
+            // only open in O_RDWR if there are no writers already
+            if (!charStruct->numWriter){
+                down_interruptible(&charStruct->SemBuf)
+                charStruct->numWriter++;
             }
+            else
+                return -ENOTTY
 
-            charStruct->numWriter++;
-
-            // critical region
             break;
 
         default:
