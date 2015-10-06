@@ -172,12 +172,12 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
         case O_RDWR:
             // read/write
             printk(KERN_WARNING "===charDriver: opened in O_RDWR\n");
-            charStruct->numReader++;
 
             // only open in O_RDWR if there are no writers already
             if (!charStruct->numWriter){
                 down_interruptible(&charStruct->SemBuf)
                 charStruct->numWriter++;
+                charStruct->numReader++;
             }
             else
                 return -ENOTTY
