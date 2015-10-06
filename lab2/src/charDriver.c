@@ -194,6 +194,34 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
 static int charDriver_release(struct inode *inode, struct file *flip) {
     printk(KERN_WARNING "===charDriver: entering RELEASE function\n");
+
+    // check opening mode
+    switch(flip->f_flags & O_ACCMODE){
+
+        case O_RDONLY:
+            // read only
+            charStruct->numReader--;
+            break;
+
+        case O_WRONLY:
+            // write only
+            // release semaphore
+            up(&charStruct->SemBuf);
+            charStruct->numWriter--;
+            break;
+
+        case O_RDWR:
+            // read/write
+            // release semaphore
+            up(&charStruct->SemBuf);
+            charStruct->numReader--;
+            charStruct->numWriter--;
+            break;
+
+        default:
+            printk(KERN_WARNING "===charDriver:RELEASE unknown access mode!!\n");
+            break;
+    }
     return 0;
 }
 
