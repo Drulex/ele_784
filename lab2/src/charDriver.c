@@ -80,11 +80,12 @@ static int __init charDriver_init(void) {
 	// 7) init r/w buffers
 	// 8) init circular buffer
 
+	int result;
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
 		printk(KERN_WARNING"===charDriver ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-	int result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
+    result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
 	if(result < 0)
 		printk(KERN_WARNING"===charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	else
