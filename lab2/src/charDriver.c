@@ -20,6 +20,8 @@
 #include <linux/device.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
+#include <uapi/asm-generic/fcntl.h>
+#include <uapi/asm-generic/errno-base.h>
 #include "circularBuffer.h"
 
 // Configuration / Defines

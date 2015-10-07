@@ -9,3 +9,4 @@ references/
 lab2/src/.tmp_versions/
 .metadata/
 *.swp
+.project
