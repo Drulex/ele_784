@@ -71,6 +71,9 @@ charDriverDev *charStruct;
 
 BufferHandle_t Buffer;
 
+struct semaphore SemReadBuf;
+struct semaphore SemWriteBuf;
+
 static int __init charDriver_init(void) {
 
 	// 1) init dev_t: must be declared outside the init
@@ -110,6 +113,8 @@ static int __init charDriver_init(void) {
 	printk(KERN_WARNING "===charDriver: initializing semaphores and R/W buffers\n");
 	// initialize mutex type semaphore for buffer
 	sema_init(&charStruct->SemBuf, 1);
+	sema_init(&SemReadBuf, 1);
+	sema_init(&SemWriteBuf, 1);
 
 	// init read/write buffers
 	charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
