@@ -123,6 +123,10 @@ static int __init charDriver_init(void) {
 	// init circular buffer
 	Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
+	char test[] = "test";
+	memcpy(&charStruct->ReadBuf, test, strlen(test) + 1);
+	printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", &charStruct->ReadBuf);
+
 	return 0;
 
 }
