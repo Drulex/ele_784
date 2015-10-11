@@ -235,8 +235,26 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
 
 
 static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops) {
-    printk(KERN_WARNING "===charDriver: entering READ function\n");
-    return 0;
+	printk(KERN_WARNING "===charDriver_read: entering READ function\n");
+	printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
+
+	// if #bytes requested is greater than size of buffer we return in multiple chunks of READWRITE_BUFSIZE
+	if (count > READWRITE_BUFSIZE){
+		printk(KERN_WARNING "===charDriver_read: not implemented yet!\n");
+		// TODO
+	return 0;
+	}
+
+	// else we return in one chunk
+	else{
+		int size_buf = (int) strlen(&charStruct->ReadBuf);
+		printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
+		if (copy_to_user(ubuf, &charStruct->ReadBuf, size_buf)){
+			printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
+			return -EFAULT;
+		}
+	return count;
+	}
 }
 
 
