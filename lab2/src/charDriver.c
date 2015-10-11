@@ -88,29 +88,29 @@ static int __init charDriver_init(void) {
 	int result;
 	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
 	if(!charStruct)
-		printk(KERN_WARNING"===charDriver ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printk(KERN_WARNING"===charDriver_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
     result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
 	if(result < 0)
-		printk(KERN_WARNING"===charDriver ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printk(KERN_WARNING"===charDriver_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 	else
-		printk(KERN_WARNING"===charDriver : MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
+		printk(KERN_WARNING"===charDriver_init: MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
 
-	printk(KERN_WARNING"===charDriver: Creating charDriver Class\n");
+	printk(KERN_WARNING"===charDriver_init: Creating charDriver Class\n");
 	charDriver_class = class_create(THIS_MODULE, "charDriverClass");
 
-	printk(KERN_WARNING"===charDriver: Creating charDriver_Node\n");
+	printk(KERN_WARNING"===charDriver_init: Creating charDriver_Node\n");
 	device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
-	printk(KERN_WARNING"===charDriver: cdev INIT\n");
+	printk(KERN_WARNING"===charDriver_init: cdev INIT\n");
 	cdev_init(&charStruct->cdev, &charDriver_fops);
 
 	charStruct->cdev.owner = THIS_MODULE;
 
 	if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
-		printk(KERN_WARNING"charDriver: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printk(KERN_WARNING"charDriver_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-	printk(KERN_WARNING "===charDriver: initializing semaphores and R/W buffers\n");
+	printk(KERN_WARNING "===charDriver_init: initializing semaphores and R/W buffers\n");
 	// initialize mutex type semaphore for buffer
 	sema_init(&charStruct->SemBuf, 1);
 	sema_init(&SemReadBuf, 1);
@@ -130,42 +130,40 @@ static int __init charDriver_init(void) {
 
 static void __exit charDriver_exit(void) {
 
-	printk(KERN_WARNING"===charDriver: cdev DELETE\n");
+	printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
 	cdev_del(&charStruct->cdev);
-	printk(KERN_WARNING"===charDriver: charDriver_class DEVICE DELETE\n");
+	printk(KERN_WARNING"===charDriver_exit: charDriver_class DEVICE DELETE\n");
 	device_destroy(charDriver_class, charStruct->dev);
-	printk(KERN_WARNING"===charDriver: charDriver_class DELETE\n");
+	printk(KERN_WARNING"===charDriver_exit: charDriver_class DELETE\n");
 	class_destroy(charDriver_class);
-	printk(KERN_WARNING"===charDriver: charStruct devno DELETE\n");
+	printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
 	unregister_chrdev_region(charStruct->dev, 1);
-	printk(KERN_WARNING"===charDriver: charStruct kfree()\n");
-	kfree(charStruct->ReadBuf);
-	kfree(charStruct->WriteBuf);
+	printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
 	kfree(charStruct);
 
 	if(circularBufferDelete(Buffer))
-        	printk(KERN_WARNING "===charDriver: Unable to delete circular buffer\n");
+        printk(KERN_WARNING "===charDriver_exit: Unable to delete circular buffer\n");
 	else
-        	printk(KERN_WARNING "===charDriver: deleting circular buffer\n");
+        printk(KERN_WARNING "===charDriver_exit: deleting circular buffer\n");
 }
 
 
 static int charDriver_open(struct inode *inode, struct file *flip) {
-    printk(KERN_WARNING "===charDriver: entering OPEN function\n");
-    printk(KERN_WARNING "=== charDriver: f_flags=%u\n", flip->f_flags);
+    printk(KERN_WARNING "===charDriver_open: entering OPEN function\n");
+    printk(KERN_WARNING "===charDriver_open: f_flags=%u\n", flip->f_flags);
 
     // check opening mode
     switch(flip->f_flags & O_ACCMODE){
 
         case O_RDONLY:
             // read only
-            printk(KERN_WARNING "===charDriver: opened in O_RDONLY\n");
+            printk(KERN_WARNING "===charDriver_open: opened in O_RDONLY\n");
             charStruct->numReader++;
             break;
 
         case O_WRONLY:
             // write only
-            printk(KERN_WARNING "===charDriver: opened in O_WRONLY\n");
+            printk(KERN_WARNING "===charDriver_open: opened in O_WRONLY\n");
 
             // only open in O_WRONLY if there are no writers already
             if (!charStruct->numWriter){
@@ -179,7 +177,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
         case O_RDWR:
             // read/write
-            printk(KERN_WARNING "===charDriver: opened in O_RDWR\n");
+            printk(KERN_WARNING "===charDriver_open: opened in O_RDWR\n");
 
             // only open in O_RDWR if there are no writers already
             if (!charStruct->numWriter){
@@ -193,7 +191,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
             break;
 
         default:
-            printk(KERN_WARNING "===charDriver: unknown access mode!!\n");
+            printk(KERN_WARNING "===charDriver_open: unknown access mode!!\n");
             break;
     }
     return 0;
@@ -201,7 +199,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
 
 static int charDriver_release(struct inode *inode, struct file *flip) {
-    printk(KERN_WARNING "===charDriver: entering RELEASE function\n");
+    printk(KERN_WARNING "===charDriver_release: entering RELEASE function\n");
 
     // check opening mode
     switch(flip->f_flags & O_ACCMODE){
@@ -227,7 +225,7 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
             break;
 
         default:
-            printk(KERN_WARNING "===charDriver:RELEASE unknown access mode!!\n");
+            printk(KERN_WARNING "===charDriver_release:RELEASE unknown access mode!!\n");
             break;
     }
     return 0;
@@ -241,12 +239,12 @@ static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t coun
 
 
 static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size_t count, loff_t *f_ops) {
-    printk(KERN_WARNING "===charDriver: entering WRITE function\n");
+    printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
     return 0;
 }
 
 
 static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long arg) {
-    printk(KERN_WARNING "===charDriver: entering IOCTL function\n");
+    printk(KERN_WARNING "===charDriver_ioctl: entering IOCTL function\n");
     return 0;
 }
