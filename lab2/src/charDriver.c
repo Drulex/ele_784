@@ -30,8 +30,8 @@
 
 // Driver internal management struct
 typedef struct {
-    char *ReadBuf;
-    char *WriteBuf;
+    char ReadBuf[READWRITE_BUFSIZE];
+    char WriteBuf[READWRITE_BUFSIZE];
     struct semaphore SemBuf;
     unsigned short numWriter;
     unsigned short numReader;
@@ -116,16 +116,12 @@ static int __init charDriver_init(void) {
     sema_init(&SemReadBuf, 1);
     sema_init(&SemWriteBuf, 1);
 
-    // init read/write buffers
-    charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
-    charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
-
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
     char test[] = "test";
-    memcpy(&charStruct->ReadBuf, test, strlen(test) + 1);
-    printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", &charStruct->ReadBuf);
+    memcpy(charStruct->ReadBuf, test, strlen(test) + 1);
+    printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", charStruct->ReadBuf);
 
     return 0;
 }
@@ -142,8 +138,6 @@ static void __exit charDriver_exit(void) {
     printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
     unregister_chrdev_region(charStruct->dev, 1);
     printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
-    //kfree(charStruct->ReadBuf);
-    //kfree(charStruct->WriteBuf);
     kfree(charStruct);
 
     if(circularBufferDelete(Buffer))
@@ -250,9 +244,12 @@ static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t coun
 
     // else we return in one chunk
     else{
-        int size_buf = (int) strlen(&charStruct->ReadBuf);
-        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
-        if (copy_to_user(ubuf, &charStruct->ReadBuf, size_buf)){
+        int size_buf = (int) strlen(charStruct->ReadBuf);
+        if(count <= size_buf)
+            printk(KERN_WARNING "===charDriver_read: returning %i bytes\n", (int) count);
+        else
+            printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
+        if (copy_to_user(ubuf, charStruct->ReadBuf, size_buf)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
