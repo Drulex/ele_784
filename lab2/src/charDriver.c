@@ -139,6 +139,8 @@ static void __exit charDriver_exit(void) {
 	printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
 	unregister_chrdev_region(charStruct->dev, 1);
 	printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
+	//kfree(charStruct->ReadBuf);
+	//kfree(charStruct->WriteBuf);
 	kfree(charStruct);
 
 	if(circularBufferDelete(Buffer))
