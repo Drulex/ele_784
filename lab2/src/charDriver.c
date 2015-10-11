@@ -76,80 +76,79 @@ struct semaphore SemWriteBuf;
 
 static int __init charDriver_init(void) {
 
-	// 1) init dev_t: must be declared outside the init
-	// 2) class_create
-	// 3) device_create
-	// 4) cdev_init
-	// 5) cdev_add
-	// 6) init all sempahores
-	// 7) init r/w buffers
-	// 8) init circular buffer
+    // 1) init dev_t: must be declared outside the init
+    // 2) class_create
+    // 3) device_create
+    // 4) cdev_init
+    // 5) cdev_add
+    // 6) init all sempahores
+    // 7) init r/w buffers
+    // 8) init circular buffer
 
-	int result;
-	charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
-	if(!charStruct)
-		printk(KERN_WARNING"===charDriver_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+    int result;
+    charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
+    if(!charStruct)
+        printk(KERN_WARNING"===charDriver_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
     result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
-	if(result < 0)
-		printk(KERN_WARNING"===charDriver_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-	else
-		printk(KERN_WARNING"===charDriver_init: MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
+    if(result < 0)
+        printk(KERN_WARNING"===charDriver_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+    else
+        printk(KERN_WARNING"===charDriver_init: MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
 
-	printk(KERN_WARNING"===charDriver_init: Creating charDriver Class\n");
-	charDriver_class = class_create(THIS_MODULE, "charDriverClass");
+    printk(KERN_WARNING"===charDriver_init: Creating charDriver Class\n");
+    charDriver_class = class_create(THIS_MODULE, "charDriverClass");
 
-	printk(KERN_WARNING"===charDriver_init: Creating charDriver_Node\n");
-	device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
+    printk(KERN_WARNING"===charDriver_init: Creating charDriver_Node\n");
+    device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
-	printk(KERN_WARNING"===charDriver_init: cdev INIT\n");
-	cdev_init(&charStruct->cdev, &charDriver_fops);
+    printk(KERN_WARNING"===charDriver_init: cdev INIT\n");
+    cdev_init(&charStruct->cdev, &charDriver_fops);
 
-	charStruct->cdev.owner = THIS_MODULE;
+    charStruct->cdev.owner = THIS_MODULE;
 
-	if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
-		printk(KERN_WARNING"charDriver_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+    if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
+        printk(KERN_WARNING"charDriver_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-	printk(KERN_WARNING "===charDriver_init: initializing semaphores and R/W buffers\n");
-	// initialize mutex type semaphore for buffer
-	sema_init(&charStruct->SemBuf, 1);
-	sema_init(&SemReadBuf, 1);
-	sema_init(&SemWriteBuf, 1);
+    printk(KERN_WARNING "===charDriver_init: initializing semaphores and R/W buffers\n");
+    // initialize mutex type semaphore for buffer
+    sema_init(&charStruct->SemBuf, 1);
+    sema_init(&SemReadBuf, 1);
+    sema_init(&SemWriteBuf, 1);
 
-	// init read/write buffers
-	charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
-	charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
+    // init read/write buffers
+    charStruct->ReadBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
+    charStruct->WriteBuf = kmalloc(READWRITE_BUFSIZE * sizeof(char), GFP_KERNEL);
 
-	// init circular buffer
-	Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+    // init circular buffer
+    Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
-	char test[] = "test";
-	memcpy(&charStruct->ReadBuf, test, strlen(test) + 1);
-	printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", &charStruct->ReadBuf);
+    char test[] = "test";
+    memcpy(&charStruct->ReadBuf, test, strlen(test) + 1);
+    printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", &charStruct->ReadBuf);
 
-	return 0;
-
+    return 0;
 }
 
 
 static void __exit charDriver_exit(void) {
 
-	printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
-	cdev_del(&charStruct->cdev);
-	printk(KERN_WARNING"===charDriver_exit: charDriver_class DEVICE DELETE\n");
-	device_destroy(charDriver_class, charStruct->dev);
-	printk(KERN_WARNING"===charDriver_exit: charDriver_class DELETE\n");
-	class_destroy(charDriver_class);
-	printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
-	unregister_chrdev_region(charStruct->dev, 1);
-	printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
-	//kfree(charStruct->ReadBuf);
-	//kfree(charStruct->WriteBuf);
-	kfree(charStruct);
+    printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
+    cdev_del(&charStruct->cdev);
+    printk(KERN_WARNING"===charDriver_exit: charDriver_class DEVICE DELETE\n");
+    device_destroy(charDriver_class, charStruct->dev);
+    printk(KERN_WARNING"===charDriver_exit: charDriver_class DELETE\n");
+    class_destroy(charDriver_class);
+    printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
+    unregister_chrdev_region(charStruct->dev, 1);
+    printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
+    //kfree(charStruct->ReadBuf);
+    //kfree(charStruct->WriteBuf);
+    kfree(charStruct);
 
-	if(circularBufferDelete(Buffer))
+    if(circularBufferDelete(Buffer))
         printk(KERN_WARNING "===charDriver_exit: Unable to delete circular buffer\n");
-	else
+    else
         printk(KERN_WARNING "===charDriver_exit: deleting circular buffer\n");
 }
 
@@ -239,26 +238,26 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
 
 
 static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops) {
-	printk(KERN_WARNING "===charDriver_read: entering READ function\n");
-	printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
+    printk(KERN_WARNING "===charDriver_read: entering READ function\n");
+    printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
-	// if #bytes requested is greater than size of buffer we return in multiple chunks of READWRITE_BUFSIZE
-	if (count > READWRITE_BUFSIZE){
-		printk(KERN_WARNING "===charDriver_read: not implemented yet!\n");
-		// TODO
-	return 0;
-	}
+    // if #bytes requested is greater than size of buffer we return in multiple chunks of READWRITE_BUFSIZE
+    if (count > READWRITE_BUFSIZE){
+        printk(KERN_WARNING "===charDriver_read: not implemented yet!\n");
+        // TODO
+    return 0;
+    }
 
-	// else we return in one chunk
-	else{
-		int size_buf = (int) strlen(&charStruct->ReadBuf);
-		printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
-		if (copy_to_user(ubuf, &charStruct->ReadBuf, size_buf)){
-			printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
-			return -EFAULT;
-		}
-	return count;
-	}
+    // else we return in one chunk
+    else{
+        int size_buf = (int) strlen(&charStruct->ReadBuf);
+        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
+        if (copy_to_user(ubuf, &charStruct->ReadBuf, size_buf)){
+            printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
+            return -EFAULT;
+        }
+    return count;
+    }
 }
 
 
