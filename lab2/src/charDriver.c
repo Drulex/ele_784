@@ -374,6 +374,7 @@ static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long 
                 return -EPERM;
 
             circularBufferResize(Buffer, (int)arg);
+            charStruct->circularBufferSize = (int)arg;
 
             break;
 
