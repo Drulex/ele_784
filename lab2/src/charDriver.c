@@ -87,7 +87,6 @@ static int __init charDriver_init(void) {
 
     int result;
     int i;
-    char test[] = "test_data";
 
     charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
     if(!charStruct)
@@ -127,12 +126,6 @@ static int __init charDriver_init(void) {
 
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
-    printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
-
-    // push some test data in circular buffer
-    for(i=0; i<strlen(test); i++){
-        circularBufferIn(Buffer, test[i]);
-    }
     printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
     return 0;
 }
