@@ -3,7 +3,7 @@
  * Description  : ELE784 Lab1 source
  *
  * Etudiants:  JORA09019100 (Alexandru Jora)
- *             XXXX00000000 (prenom nom #2)
+ *             MUKM28098503 (Mukandila Mukandila)
  */
 
 #include <linux/module.h>
@@ -21,9 +21,11 @@
 #include <linux/device.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
+#include <linux/ioctl.h>
 #include <uapi/asm-generic/fcntl.h>
 #include <uapi/asm-generic/errno-base.h>
 #include "circularBuffer.h"
+#include "charDriver.h"
 
 // Configuration / Defines
 #define READWRITE_BUFSIZE 16
