@@ -297,8 +297,8 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
 
     // in case user sends more bytes than size of READWRITE_BUFSIZE we write in chunks
     if (count > READWRITE_BUFSIZE){
-        if(copy_from_user(ubuf, charStruct->WriteBuf, READWRITE_BUFSIZE)){
-            printk(KERN_WARNING "===charDriver_read: error while copying data from user space\n");
+        if(copy_from_user(charStruct->WriteBuf, ubuf, READWRITE_BUFSIZE)){
+            printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
             return -EFAULT;
         }
         // push data in circular buffer
