@@ -312,8 +312,20 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
         return i;
     }
 
-
-    return count;
+    // else we write it in one chunk
+    else{
+        if(copy_from_user(charStruct->WriteBuf, ubuf, count)){
+            printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
+            return -EFAULT;
+        }
+        while(i<count && buf_retcode != -1){
+            circularBufferIn(Buffer, charStruct->WriteBuf[i]);
+            printk(KERN_WARNING "===charDriver_write: circularBufferIn=%i\n", buf_retcode);
+            i++;
+        }
+        printk(KERN_WARNING "===charDriver_write: contents of WriteBuf:%s\n", charStruct->WriteBuf);
+        return count;
+    }
 }
 
 
