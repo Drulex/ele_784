@@ -86,6 +86,7 @@ static int __init charDriver_init(void) {
     // 8) init circular buffer
 
     int result;
+    int i;
     char test[] = "test_data";
 
     charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
@@ -118,8 +119,15 @@ static int __init charDriver_init(void) {
     sema_init(&SemReadBuf, 1);
     sema_init(&SemWriteBuf, 1);
 
+    // init read/write buffers
+    for(i=0; i<READWRITE_BUFSIZE; i++){
+        charStruct->ReadBuf[i] = '\0';
+        charStruct->WriteBuf[i] = '\0';
+    }
+
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+    printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
 
     // push some test data in circular buffer
     for(i=0; i<strlen(test); i++){
