@@ -40,6 +40,7 @@ typedef struct {
     unsigned short numReader;
     dev_t dev;
     struct cdev cdev;
+    unsigned int circularBufferSize;
     wait_queue_head_t in_q; // wait queue for reader
 	wait_queue_head_t out_q; // wait queue for writer
 } charDriverDev;
@@ -136,6 +137,7 @@ static int __init charDriver_init(void) {
 
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+    charStruct->circularBufferSize = CIRCULAR_BUFFER_SIZE; // Saves size of circular buffer
     printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
 
     // push some test data in circular buffer
@@ -339,6 +341,49 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
 
 
 static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long arg) {
+
     printk(KERN_WARNING "===charDriver_ioctl: entering IOCTL function\n");
+
+    if (_IOC_TYPE(cmd) != CHARDRIVER_IOC_MAGIC) {
+        printk(KERN_WARNING "===charDriver_ioctl: invalid MAGIC NUMBER\n");
+        return -ENOTTY;
+    }
+
+    if (_IOC_NR(cmd) > CHARDRIVER_IOC_MAXNR) {
+        printk(KERN_WARNING "===charDriveR_ioctl: invalid IOCTL command\n");
+        return -ENOTTY;
+    }
+
+    switch(cmd) {
+
+        case CHARDRIVER_GETNUMDATA:
+            put_user(circularBufferDataCount(Buffer), (int *)arg);
+            break;
+
+        case CHARDRIVER_GETNUMREADER:
+            put_user(charStruct->numReader, (int *)arg);
+            break;
+
+        case CHARDRIVER_GETBUFSIZE:
+            put_user(charStruct->circularBufferSize, (int *)arg);
+            break;
+
+        case CHARDRIVER_SETBUFSIZE:
+
+            if(!capable(CAP_SYS_ADMIN))
+                return -EPERM;
+
+            circularBufferResize(Buffer, (int)arg);
+
+            break;
+
+        case CHARDRIVER_GETMAGICNUMBER:
+            put_user(CHARDRIVER_IOC_MAGIC, (char *)arg);
+            break;
+
+        default:
+            return -EINVAL;
+
+    }
     return 0;
 }

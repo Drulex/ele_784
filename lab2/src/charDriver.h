@@ -1,10 +1,14 @@
 /*
- *  * File         : ele784-lab1.c
- *  * Description  : ELE784 Lab1 source
+ *  * File         : charDriver.h
+ *  * Description  : charDriver declarations mostly for IOCTL and other constants
  *  *
  *  * Etudiants:  JORA09019100 (Alexandru Jora)
  *  *             MUKM28098503 (Mukandila Mukandila)
  *  */
+
+#ifndef CHARDRIVER_H
+#define CHARDRIVER_H
+#endif
 
 #define CHARDRIVER_IOC_MAGIC        'e'
 #define CHARDRIVER_IOCRESET         _IO(CHARDRIVER_IOC_MAGIC,0)
