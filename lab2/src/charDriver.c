@@ -232,24 +232,45 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
 
 
 static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops) {
+    int i = 0;
+    int buf_retcode = 0;
+    int ReadBuf_size;
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
     printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
-    // if #bytes requested is greater than size of buffer we return in multiple chunks of READWRITE_BUFSIZE
-    if (count > READWRITE_BUFSIZE){
-        printk(KERN_WARNING "===charDriver_read: not implemented yet!\n");
-        // TODO
-    return 0;
+    // if circular buffer is empty we exit
+    if(!circularBufferDataCount(Buffer)){
+        printk(KERN_WARNING "===charDriver_read: circular buffer empty!\n");
+        return 0;
+    }
+
+    // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
+    if(count >= READWRITE_BUFSIZE){
+        while(i<READWRITE_BUFSIZE && !buf_retcode){
+            buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
+            printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
+            i++;
+        }
+        printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
+        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", (int) READWRITE_BUFSIZE);
+        if (copy_to_user(ubuf, charStruct->ReadBuf, READWRITE_BUFSIZE)){
+            printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
+            return -EFAULT;
+        }
+        return READWRITE_BUFSIZE;
     }
 
     // else we return in one chunk
     else{
-        int size_buf = (int) strlen(charStruct->ReadBuf);
-        if(count <= size_buf)
-            printk(KERN_WARNING "===charDriver_read: returning %i bytes\n", (int) count);
-        else
-            printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", size_buf);
-        if (copy_to_user(ubuf, charStruct->ReadBuf, size_buf)){
+        while(i<count && !buf_retcode){
+            buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
+            printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
+            i++;
+        }
+        printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
+        ReadBuf_size = (int) strlen(charStruct->ReadBuf);
+        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", ReadBuf_size);
+        if (copy_to_user(ubuf, charStruct->ReadBuf, ReadBuf_size)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
