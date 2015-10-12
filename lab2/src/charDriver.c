@@ -209,7 +209,14 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 
 
 static int charDriver_release(struct inode *inode, struct file *flip) {
+    int i;
     printk(KERN_WARNING "===charDriver_release: entering RELEASE function\n");
+
+    // empty read/write buffers
+    for(i=0; i<READWRITE_BUFSIZE; i++){
+        charStruct->ReadBuf[i] = '\0';
+        charStruct->WriteBuf[i] = '\0';
+    }
 
     // check opening mode
     switch(flip->f_flags & O_ACCMODE){
