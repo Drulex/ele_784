@@ -86,6 +86,8 @@ static int __init charDriver_init(void) {
     // 8) init circular buffer
 
     int result;
+    char test[] = "test_data";
+
     charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
     if(!charStruct)
         printk(KERN_WARNING"===charDriver_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
@@ -119,10 +121,11 @@ static int __init charDriver_init(void) {
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
 
-    char test[] = "test";
-    memcpy(charStruct->ReadBuf, test, strlen(test) + 1);
-    printk(KERN_WARNING "===charDriver_init: ReadBuf contents:%s\n", charStruct->ReadBuf);
-
+    // push some test data in circular buffer
+    for(i=0; i<strlen(test); i++){
+        circularBufferIn(Buffer, test[i]);
+    }
+    printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
     return 0;
 }
 
