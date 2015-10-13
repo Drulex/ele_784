@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
- #include <string.h>
+#include <string.h>
 
 #define DEVICE_NODE     "/dev/charDriver_Node"
 #define IN_BUF_SIZE     10
@@ -160,10 +160,11 @@ int write_mode(void){
 
 int open_mode(void){
     int open_mode;
+    int fd;
     open_mode = 0;
     printf("Choose an opening mode\n");
     printf("1. O_RDONLY\n");
-    printf("2. O_RWONLY\n");
+    printf("2. O_WRONLY\n");
     printf("3. O_RDRW\n");
     scanf("%d", &open_mode);
     CLEAR_TERM;
@@ -171,16 +172,43 @@ int open_mode(void){
     switch(open_mode){
         case 1:
             // open read only
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY mode\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
             read_mode();
             break;
 
         case 2:
             // open write only
+            fd = open(DEVICE_NODE, O_WRONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RWONLY mode\n");
+            }
+            else{
+                printf("Error opening device in O_RWONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
             write_mode();
             break;
 
         case 3:
             // open read/write
+            fd = open(DEVICE_NODE, O_RDWR);
+            if(fd){
+                printf("Device succesfully openend in O_RDRW mode\n");
+            }
+            else{
+                printf("Error opening device in O_RDRW mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
             rw_mode();
             break;
     }
