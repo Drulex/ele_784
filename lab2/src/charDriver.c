@@ -311,8 +311,14 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
             i++;
         }
         printk(KERN_WARNING "===charDriver_write: contents of WriteBuf:%s\n", charStruct->WriteBuf);
-        // we return only the number of bytes pushed to circular buffer
-        return i;
+
+        // we return only the number of bytes pushed to circular buffer or zero if full
+        if(buf_retcode == -1){
+            printk(KERN_WARNING "===charDriver_write: circularBuffer FULL!");
+            return 0;
+        }
+        else
+            return i;
     }
 
     // else we write it in one chunk
@@ -327,7 +333,13 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
             i++;
         }
         printk(KERN_WARNING "===charDriver_write: contents of WriteBuf:%s\n", charStruct->WriteBuf);
-        return count;
+
+        if(buf_retcode == -1){
+            printk(KERN_WARNING "===charDriver_write: circularBuffer FULL!");
+            return 0;
+        }
+        else
+            return count;
     }
 }
 
