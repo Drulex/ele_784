@@ -76,7 +76,58 @@ int circularBufferDelete(BufferHandle_t handle) {
 
 
 int circularBufferResize(BufferHandle_t handle, unsigned int newSize) {
-    // TODO
+    int i = 0;
+    int buf_retcode = 0;
+    Buffer_t* buffer = (Buffer_t*) handle;
+    char *newBufferData;
+    unsigned int oldOutIndex;
+    if(newSize <= buffer->size)
+        return BUFFER_ERROR;
+
+    // print some stuff for debugging
+    printk(KERN_WARNING "===circularBuffer_resize: **parameters values before resize**\n");
+    printk(KERN_WARNING "===circularBuffer_resize: inIndex=%u\n", buffer->inIndex);
+    printk(KERN_WARNING "===circularBuffer_resize: outIndex=%u\n", buffer->outIndex);
+    printk(KERN_WARNING "===circularBuffer_resize: full=%u\n", buffer->full);
+    printk(KERN_WARNING "===circularBuffer_resize: empty=%u\n", buffer->empty);
+    printk(KERN_WARNING "===circularBuffer_resize: size=%u\n", buffer->size);
+    printk(KERN_WARNING "===circularBuffer_resize: data=%s\n", buffer->bufferData);
+
+    oldOutIndex = buffer->outIndex;
+
+    // new buffer
+    newBufferData = (char*) kmalloc(sizeof(char) * newSize, GFP_KERNEL);
+    for(i=0; i<newSize; i++){
+        newBufferData[i] = '\0';
+    }
+
+    i = 0;
+    // fill new buffer with data from circular buffer
+    while(i<newSize && !buf_retcode){
+        buf_retcode = circularBufferOut(handle, &newBufferData[i]);
+        printk(KERN_WARNING "===circularBuffer_resize: circularBufferOut=%i\n", buf_retcode);
+        i++;
+    }
+
+    // free previous buffer
+    kfree(buffer->bufferData);
+
+    // modify buffer params to reflect changes
+    buffer->size = newSize;
+    buffer->bufferData = newBufferData;
+    buffer->full = 0;
+    buffer->empty = 0;
+    buffer->outIndex = oldOutIndex;
+
+    // reprint params
+    printk(KERN_WARNING "===circularBuffer_resize: **parameters values after resize**\n");
+    printk(KERN_WARNING "===circularBuffer_resize: inIndex=%u\n", buffer->inIndex);
+    printk(KERN_WARNING "===circularBuffer_resize: outIndex=%u\n", buffer->outIndex);
+    printk(KERN_WARNING "===circularBuffer_resize: full=%u\n", buffer->full);
+    printk(KERN_WARNING "===circularBuffer_resize: empty=%u\n", buffer->empty);
+    printk(KERN_WARNING "===circularBuffer_resize: size=%u\n", buffer->size);
+    printk(KERN_WARNING "===circularBuffer_resize: data=%s\n", buffer->bufferData);
+
     return BUFFER_OK;
 }
 
