@@ -99,7 +99,7 @@ static int __init charDriver_init(void) {
     if(!charStruct)
         printk(KERN_WARNING"===charDriver_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
-    result = alloc_chrdev_region(&charStruct->dev, 0, 1, "charDriver");
+    result = alloc_chrdev_region(&charStruct->dev, MINOR_NUMBER, NUMBER_OF_DEVICES, DEVICE_NAME);
     if(result < 0)
         printk(KERN_WARNING"===charDriver_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
     else
@@ -139,9 +139,6 @@ static int __init charDriver_init(void) {
 
 
 static void __exit charDriver_exit(void) {
-
-    // testing
-    //circularBufferResize(Buffer, 512);
 
     printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
     cdev_del(&charStruct->cdev);
