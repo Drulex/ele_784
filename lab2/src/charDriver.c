@@ -14,15 +14,22 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/errno.h>
+#include <linux/sched.h>
+#include <uapi/asm-generic/errno-base.h>
 #include <linux/fcntl.h>
+#include <uapi/asm-generic/fcntl.h>
 #include <linux/wait.h>
 #include <linux/spinlock.h>
 #include <linux/device.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
-#include <uapi/asm-generic/fcntl.h>
-#include <uapi/asm-generic/errno-base.h>
+#include <uapi/asm-generic/ioctl.h>
 #include "circularBuffer.h"
+
+// Driver constants
+#define MINOR_NUMBER 0
+#define NUMBER_OF_DEVICES 1
+#define DEVICE_NAME "etsele_cdev"  // Use with 'alloc_chrdev_region()' and 'device_create()'
 
 // Configuration / Defines
 #define READWRITE_BUFSIZE 16
@@ -46,11 +53,11 @@ MODULE_LICENSE("Dual BSD/GPL");
 // Prototypes
 static int __init charDriver_init(void);
 static void __exit charDriver_exit(void);
-static int charDriver_open(struct inode *inode, struct file *flip);
-static int charDriver_release(struct inode *inode, struct file *flip);
-static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops);
-static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size_t count, loff_t *f_ops);
-static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long arg);
+static int charDriver_open(struct inode *inode, struct file *filp);
+static int charDriver_release(struct inode *inode, struct file *filp);
+static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops);
+static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops);
+static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 // Driver handled file operations
 static struct file_operations charDriver_fops = {
@@ -154,12 +161,12 @@ static void __exit charDriver_exit(void) {
 }
 
 
-static int charDriver_open(struct inode *inode, struct file *flip) {
+static int charDriver_open(struct inode *inode, struct file *filp) {
     printk(KERN_WARNING "===charDriver_open: entering OPEN function\n");
-    printk(KERN_WARNING "===charDriver_open: f_flags=%u\n", flip->f_flags);
+    printk(KERN_WARNING "===charDriver_open: f_flags=%u\n", filp->f_flags);
 
     // check opening mode
-    switch(flip->f_flags & O_ACCMODE){
+    switch(filp->f_flags & O_ACCMODE){
 
         case O_RDONLY:
             // read only
@@ -204,7 +211,7 @@ static int charDriver_open(struct inode *inode, struct file *flip) {
 }
 
 
-static int charDriver_release(struct inode *inode, struct file *flip) {
+static int charDriver_release(struct inode *inode, struct file *filp) {
     int i;
     printk(KERN_WARNING "===charDriver_release: entering RELEASE function\n");
 
@@ -215,7 +222,7 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
     }
 
     // check opening mode
-    switch(flip->f_flags & O_ACCMODE){
+    switch(filp->f_flags & O_ACCMODE){
 
         case O_RDONLY:
             // read only
@@ -245,7 +252,7 @@ static int charDriver_release(struct inode *inode, struct file *flip) {
 }
 
 
-static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t count, loff_t *f_ops) {
+static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
     int i = 0;
     int buf_retcode = 0;
     int ReadBuf_size;
@@ -293,7 +300,7 @@ static ssize_t charDriver_read(struct file *flip, char __user *ubuf, size_t coun
 }
 
 
-static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size_t count, loff_t *f_ops) {
+static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
     int i = 0;
     int buf_retcode = 0;
     printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
@@ -344,7 +351,7 @@ static ssize_t charDriver_write(struct file *flip, const char __user *ubuf, size
 }
 
 
-static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long arg) {
+static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     printk(KERN_WARNING "===charDriver_ioctl: entering IOCTL function\n");
     return 0;
 }

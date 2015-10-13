@@ -168,9 +168,21 @@ unsigned int circularBufferDataCount(BufferHandle_t handle) {
     if(buffer->inIndex > buffer->outIndex) {
         retval = buffer->inIndex - buffer->outIndex;
     } else if(buffer->inIndex < buffer->outIndex) {
-        retval = buffer->inIndex - buffer->outIndex + buffer->size;
+        retval = buffer->size + buffer->inIndex - buffer->outIndex;
     } else if(buffer->full) {
         retval = buffer->size;
     }
     return retval;
+}
+
+
+unsigned int circularBufferDataSize(BufferHandle_t handle) {
+   Buffer_t* buffer = (Buffer_t*) handle;
+   return buffer->size;
+}
+
+
+unsigned int circularBufferDataRemaining(BufferHandle_t handle) {
+   Buffer_t* buffer = (Buffer_t*) handle;
+   return buffer->size - circularBufferDataCount(handle);
 }
