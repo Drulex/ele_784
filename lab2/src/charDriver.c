@@ -82,7 +82,7 @@ static int __init charDriver_init(void) {
     // 4) cdev_init
     // 5) cdev_add
     // 6) init all sempahores
-    // 7) init r/w buffers
+    // 7) init & flush r/w buffers
     // 8) init circular buffer
 
     int result;
@@ -118,7 +118,7 @@ static int __init charDriver_init(void) {
     sema_init(&SemReadBuf, 1);
     sema_init(&SemWriteBuf, 1);
 
-    // init read/write buffers
+    // flush read/write buffers
     for(i=0; i<READWRITE_BUFSIZE; i++){
         charStruct->ReadBuf[i] = '\0';
         charStruct->WriteBuf[i] = '\0';
@@ -134,7 +134,7 @@ static int __init charDriver_init(void) {
 static void __exit charDriver_exit(void) {
 
     // testing
-    circularBufferResize(Buffer, 512);
+    //circularBufferResize(Buffer, 512);
 
     printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
     cdev_del(&charStruct->cdev);
