@@ -70,6 +70,7 @@ int read_blocking(void){
     printf("Reading in blocking mode\n");
     printf("How many bytes to read?\n");
     scanf("%d", &numBytes);
+    //TODO
     return 0;
 }
 
@@ -78,6 +79,7 @@ int read_non_blocking(void){
     printf("Reading in non blocking mode\n");
     printf("How many bytes to read?\n");
     scanf("%d", &numBytes);
+    //TODO
     return 0;
 }
 
@@ -97,6 +99,45 @@ int read_mode(void){
 
         case 2:
             read_non_blocking();
+            break;
+    }
+    return 0;
+}
+
+int write_blocking(void){
+    int numBytes;
+    printf("Writing in blocking mode\n");
+    printf("How many bytes to write?\n");
+    scanf("%d", &numBytes);
+    //TODO
+    return 0;
+}
+
+int write_non_blocking(void){
+    int numBytes;
+    printf("Writing in non blocking mode\n");
+    printf("How many bytes to write?\n");
+    scanf("%d", &numBytes);
+    //TODO
+    return 0;
+}
+
+int write_mode(void){
+    int write_mode;
+    write_mode = 0;
+    printf("Choose an opening mode\n");
+    printf("1. Blocking\n");
+    printf("2. Non-blocking\n");
+    scanf("%d", &write_mode);
+    CLEAR_TERM;
+
+    switch(write_mode){
+        case 1:
+            write_blocking();
+            break;
+
+        case 2:
+            write_non_blocking();
             break;
     }
     return 0;
