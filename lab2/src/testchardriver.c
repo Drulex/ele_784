@@ -23,28 +23,40 @@
 #define CLEAR_TERM  printf("\033[2J\033[1;1H");
 
 int main(void) {
+    int opened = 0;
     while(1){
-        CLEAR_TERM
         int choice = menu();
         switch(choice){
             case 1:
-                read_mode();
+                open_mode();
                 break;
 
             case 2:
-                write_mode();
+                if(!opened){
+                    printf("***Error you must open device first!***\n\n");
+                    break;
+                }
+                read_mode();
                 break;
 
             case 3:
-                printf("3\n");
+                if(!opened){
+                    printf("***Error you must open device first!***\n\n");
+                    break;
+                }
+                write_mode();
                 break;
 
             case 4:
-                printf("4\n");
+                if(!opened){
+                    printf("***Error you must open device first!***\n\n");
+                    break;
+                }
+                printf("Not implemented!\n");
                 break;
 
             case 5:
-                printf("5\n");
+                printf("Exiting\n");
                 exit(-1);
                 break;
         }
@@ -58,9 +70,9 @@ int menu(void){
     printf("charDriver test application\n");
     printf("===========================\n\n");
     printf("Choose a command to perform\n");
-    printf("1. Read\n");
-    printf("2. Write\n");
-    printf("3. Read and write\n");
+    printf("1. Open\n");
+    printf("2. Read\n");
+    printf("3. Write\n");
     printf("4. Send IOCTL command\n");
     printf("5. Exit\n");
     scanf("%d", &cmd);
@@ -146,6 +158,62 @@ int write_mode(void){
     return 0;
 }
 
+int open_mode(void){
+    int open_mode;
+    open_mode = 0;
+    printf("Choose an opening mode\n");
+    printf("1. O_RDONLY\n");
+    printf("2. O_RWONLY\n");
+    printf("3. O_RDRW\n");
+    scanf("%d", &open_mode);
+    CLEAR_TERM;
+
+    switch(open_mode){
+        case 1:
+            // open read only
+            read_mode();
+            break;
+
+        case 2:
+            // open write only
+            write_mode();
+            break;
+
+        case 3:
+            // open read/write
+            rw_mode();
+            break;
+    }
+    return 0;
+}
+
+int rw_mode(void){
+    int rw_mode;
+    rw_mode = 0;
+    printf("Choose a command\n");
+    printf("1. Read\n");
+    printf("2. Write\n");
+    printf("3. Exit\n");
+    scanf("%d", &rw_mode);
+    CLEAR_TERM;
+
+    do{
+        switch(rw_mode){
+            case 1:
+                read_mode();
+                break;
+
+            case 2:
+                write_mode();
+                break;
+
+            case 3:
+                printf("Exiting R/W mode\n");
+                return 0;
+        }
+    } while(!rw_mode);
+    return 0;
+}
 
 
     /*
