@@ -23,14 +23,16 @@
 #define CLEAR_TERM  printf("\033[2J\033[1;1H");
 
 int main(void) {
-    int choice = menu();
-    switch(choice){
+    while(1){
+        CLEAR_TERM
+        int choice = menu();
+        switch(choice){
             case 1:
                 read_mode();
                 break;
 
             case 2:
-                printf("2\n");
+                write_mode();
                 break;
 
             case 3:
@@ -46,6 +48,7 @@ int main(void) {
                 exit(-1);
                 break;
         }
+    }
 }
 
 int menu(void){
