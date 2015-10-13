@@ -133,6 +133,9 @@ static int __init charDriver_init(void) {
 
 static void __exit charDriver_exit(void) {
 
+    // testing
+    circularBufferResize(Buffer, 512);
+
     printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
     cdev_del(&charStruct->cdev);
     printk(KERN_WARNING"===charDriver_exit: charDriver_class DEVICE DELETE\n");
