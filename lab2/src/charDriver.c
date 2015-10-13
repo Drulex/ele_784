@@ -350,22 +350,30 @@ static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long 
     }
 
     if (_IOC_NR(cmd) > CHARDRIVER_IOC_MAXNR) {
-        printk(KERN_WARNING "===charDriveR_ioctl: invalid IOCTL command\n");
+        printk(KERN_WARNING "===charDriver_ioctl: invalid IOCTL command\n");
         return -ENOTTY;
     }
 
     switch(cmd) {
 
         case CHARDRIVER_GETNUMDATA:
-            put_user(circularBufferDataCount(Buffer), (int *)arg);
+
+            put_user(circularBufferDataCount(Buffer), (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: data in buffer is: %i \n", circularBufferDataCount(Buffer));
+
             break;
 
         case CHARDRIVER_GETNUMREADER:
-            put_user(charStruct->numReader, (int *)arg);
+
+            printk(KERN_WARNING "===charDriver_ioctl: number of readers is: %i \n", charStruct->numReader);
+            put_user(charStruct->numReader, (int __user *)arg);
             break;
 
         case CHARDRIVER_GETBUFSIZE:
-            put_user(charStruct->circularBufferSize, (int *)arg);
+
+            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", charStruct->circularBufferSize);
+            put_user(charStruct->circularBufferSize, (int __user *)arg);
+
             break;
 
         case CHARDRIVER_SETBUFSIZE:
@@ -373,18 +381,22 @@ static long charDriver_ioctl(struct file *flip, unsigned int cmd, unsigned long 
             if(!capable(CAP_SYS_ADMIN))
                 return -EPERM;
 
-            circularBufferResize(Buffer, (int)arg);
+            circularBufferResize(Buffer, (int __user *)arg);
             charStruct->circularBufferSize = (int)arg;
 
             break;
 
         case CHARDRIVER_GETMAGICNUMBER:
-            put_user(CHARDRIVER_IOC_MAGIC, (char *)arg);
+
+            put_user(CHARDRIVER_IOC_MAGIC, (char __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: the magic number is: %c \n", CHARDRIVER_IOC_MAGIC);
+
             break;
 
         default:
             return -EINVAL;
 
     }
+
     return 0;
 }

@@ -6,6 +6,7 @@
  *  *             MUKM28098503 (Mukandila Mukandila)
  *  */
 
+#include <asm/ioctl.h>
 #ifndef CHARDRIVER_H
 #define CHARDRIVER_H
 #endif

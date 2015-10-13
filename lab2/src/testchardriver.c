@@ -33,13 +33,32 @@ int main(void) {
     char bufOut[OUT_BUF_SIZE];
     char bufIn[IN_BUF_SIZE];
     int ret;
+    int ioctl_ret;
 
     fd1 = open(DEVICE_NODE, O_RDONLY); // Open in READ ONLY
-    if(fd1)
+    if(fd1) {
+
         printf("Opened in READ ONLY\n");
-    else
+        ioctl(fd1,CHARDRIVER_GETNUMREADER,&ioctl_ret);
+        ioctl(fd1,CHARDRIVER_GETNUMDATA,&ioctl_ret);
+        ioctl(fd1,CHARDRIVER_GETBUFSIZE,&ioctl_ret);
+        ioctl(fd1,CHARDRIVER_GETMAGICNUMBER,&ioctl_ret);
+
+//        printf("RETURN is %i\n",ret);
+
+//        printf("IOCTL returned: %i\n", ioctl_ret);
+
+    } else
         return fd1;
+
     close(fd1);
+
+//    fd2 = open(DEVICE_NODE, O_WRONLY); // Open in WRITE ONLY
+//  if(fd2)
+//        printf("Opened in WRITE ONLY\n");
+//    else
+//        return fd2;
+
 
     exit(0);
 }
