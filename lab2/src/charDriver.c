@@ -191,10 +191,8 @@ static int charDriver_open(struct inode *inode, struct file *filp) {
             printk(KERN_WARNING "===charDriver_open: opened in O_WRONLY\n");
 
             // only open in O_WRONLY if there are no writers already
-            if (!charStruct->numWriter){
-                //down_interruptible(&charStruct->SemBuf);
+            if (!charStruct->numWriter)
                 charStruct->numWriter++;
-            }
             else
                 return -ENOTTY;
 
@@ -206,7 +204,6 @@ static int charDriver_open(struct inode *inode, struct file *filp) {
 
             // only open in O_RDWR if there are no writers already
             if (!charStruct->numWriter){
-                //down_interruptible(&charStruct->SemBuf);
                 charStruct->numWriter++;
                 charStruct->numReader++;
             }
