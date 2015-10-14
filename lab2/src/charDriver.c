@@ -23,8 +23,9 @@
 #include <linux/device.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
-#include <uapi/asm-generic/ioctl.h>
+#include <asm/ioctl.h>
 #include "circularBuffer.h"
+#include "charDriver.h"
 
 // Driver constants
 #define MINOR_NUMBER 0
@@ -42,6 +43,7 @@ typedef struct {
     struct semaphore SemBuf;
     unsigned short numWriter;
     unsigned short numReader;
+    unsigned int circularBufferSize;
     dev_t dev;
     struct cdev cdev;
     wait_queue_head_t in_q; // wait queue for reader
@@ -427,7 +429,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
             if(!capable(CAP_SYS_ADMIN))
                 return -EPERM;
 
-            circularBufferResize(Buffer, (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: resizing buffer to %i \n", (int)arg);
+            circularBufferResize(Buffer, (int)arg);
             charStruct->circularBufferSize = (int)arg;
 
             break;

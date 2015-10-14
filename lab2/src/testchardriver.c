@@ -43,6 +43,8 @@ int main(void) {
         ioctl(fd1,CHARDRIVER_GETNUMDATA,&ioctl_ret);
         ioctl(fd1,CHARDRIVER_GETBUFSIZE,&ioctl_ret);
         ioctl(fd1,CHARDRIVER_GETMAGICNUMBER,&ioctl_ret);
+        ioctl(fd1,CHARDRIVER_SETBUFSIZE,300);
+        ioctl(fd1,CHARDRIVER_GETBUFSIZE,&ioctl_ret);
 
 //        printf("RETURN is %i\n",ret);
 
