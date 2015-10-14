@@ -91,7 +91,9 @@ int read_non_blocking(void){
     }
     //TODO
     if(fd){
-        read(fd, &bufOut, numBytes+1);
+        read(fd, &bufOut, numBytes);
+        // add string terminating char
+        bufOut[numBytes] = '\0';
         printf("Read from buffer: %s\n\n", bufOut);
     }
     else{
