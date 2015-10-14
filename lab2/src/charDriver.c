@@ -3,7 +3,7 @@
  * Description  : ELE784 Lab1 source
  *
  * Etudiants:  JORA09019100 (Alexandru Jora)
- *             XXXX00000000 (prenom nom #2)
+ *             MUKM28098503 (Mukandila Mukandila)
  */
 
 #include <linux/module.h>
@@ -44,6 +44,8 @@ typedef struct {
     unsigned short numReader;
     dev_t dev;
     struct cdev cdev;
+    wait_queue_head_t in_q; // wait queue for reader
+	wait_queue_head_t out_q; // wait queue for writer
 } charDriverDev;
 
 // Module Information
@@ -94,6 +96,7 @@ static int __init charDriver_init(void) {
 
     int result;
     int i;
+    char test[] = "test_data";
 
     charStruct = kmalloc(sizeof(charDriverDev),GFP_KERNEL);
     if(!charStruct)
@@ -131,8 +134,18 @@ static int __init charDriver_init(void) {
         charStruct->WriteBuf[i] = '\0';
     }
 
+    printk(KERN_WARNING "===charDriver_init: initializing R/W wait queues\n");
+    init_waitqueue_head(&charStruct->in_q);
+    init_waitqueue_head(&charStruct->out_q);
+
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+    printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
+
+    // push some test data in circular buffer
+    for(i=0; i<strlen(test); i++){
+        circularBufferIn(Buffer, test[i]);
+    }
     printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
     return 0;
 }
@@ -177,7 +190,7 @@ static int charDriver_open(struct inode *inode, struct file *filp) {
 
             // only open in O_WRONLY if there are no writers already
             if (!charStruct->numWriter){
-                down_interruptible(&charStruct->SemBuf);
+                //down_interruptible(&charStruct->SemBuf);
                 charStruct->numWriter++;
             }
             else
@@ -191,7 +204,7 @@ static int charDriver_open(struct inode *inode, struct file *filp) {
 
             // only open in O_RDWR if there are no writers already
             if (!charStruct->numWriter){
-                down_interruptible(&charStruct->SemBuf);
+                //down_interruptible(&charStruct->SemBuf);
                 charStruct->numWriter++;
                 charStruct->numReader++;
             }
@@ -256,43 +269,69 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
     printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
+    if(down_interruptible(&charStruct->SemBuf)) // locking circular buffer access
+    	return -ERESTARTSYS;
     // if circular buffer is empty we exit
-    if(!circularBufferDataCount(Buffer)){
+    // ideally we put the waiting users in a wait_queue
+    while(!circularBufferDataCount(Buffer)){
         printk(KERN_WARNING "===charDriver_read: circular buffer empty!\n");
-        return 0;
+        printk(KERN_WARNING "===charDriver_read: going to sleep!\n");
+
+        up(&charStruct->SemBuf); // unlocking circular buffer access
+
+        if(wait_event_interruptible(charStruct->in_q,circularBufferDataCount(Buffer))) // getting an error here when building
+        	return -ERESTARTSYS;
+
+        if(down_interruptible(&charStruct->SemBuf)) // locking circular buffer access
+            return -ERESTARTSYS;
+        //return 0;
     }
 
     // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
     if(count >= READWRITE_BUFSIZE){
+
         while(i<READWRITE_BUFSIZE && !buf_retcode){
+
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
+
         printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
         printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", (int) READWRITE_BUFSIZE);
+
         if (copy_to_user(ubuf, charStruct->ReadBuf, READWRITE_BUFSIZE)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
+
+        // Wake up writers and return
+        wake_up_interruptible(&charStruct->out_q);
         return READWRITE_BUFSIZE;
     }
 
     // else we return in one chunk
     else{
+
         while(i<count && !buf_retcode){
+
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
+
         printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
         ReadBuf_size = (int) strlen(charStruct->ReadBuf);
         printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", ReadBuf_size);
+
         if (copy_to_user(ubuf, charStruct->ReadBuf, ReadBuf_size)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
-    return count;
+
+        // Wake up writers and return
+        wake_up_interruptible(&charStruct->out_q);
+        return count;
     }
 }
 
@@ -350,5 +389,60 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
 
 static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     printk(KERN_WARNING "===charDriver_ioctl: entering IOCTL function\n");
+
+    if (_IOC_TYPE(cmd) != CHARDRIVER_IOC_MAGIC) {
+        printk(KERN_WARNING "===charDriver_ioctl: invalid MAGIC NUMBER\n");
+        return -ENOTTY;
+    }
+
+    if (_IOC_NR(cmd) > CHARDRIVER_IOC_MAXNR) {
+        printk(KERN_WARNING "===charDriver_ioctl: invalid IOCTL command\n");
+        return -ENOTTY;
+    }
+
+    switch(cmd) {
+
+        case CHARDRIVER_GETNUMDATA:
+
+            put_user(circularBufferDataCount(Buffer), (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: data in buffer is: %i \n", circularBufferDataCount(Buffer));
+
+            break;
+
+        case CHARDRIVER_GETNUMREADER:
+
+            printk(KERN_WARNING "===charDriver_ioctl: number of readers is: %i \n", charStruct->numReader);
+            put_user(charStruct->numReader, (int __user *)arg);
+            break;
+
+        case CHARDRIVER_GETBUFSIZE:
+
+            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", charStruct->circularBufferSize);
+            put_user(charStruct->circularBufferSize, (int __user *)arg);
+
+            break;
+
+        case CHARDRIVER_SETBUFSIZE:
+
+            if(!capable(CAP_SYS_ADMIN))
+                return -EPERM;
+
+            circularBufferResize(Buffer, (int __user *)arg);
+            charStruct->circularBufferSize = (int)arg;
+
+            break;
+
+        case CHARDRIVER_GETMAGICNUMBER:
+
+            put_user(CHARDRIVER_IOC_MAGIC, (char __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: the magic number is: %c \n", CHARDRIVER_IOC_MAGIC);
+
+            break;
+
+        default:
+            return -EINVAL;
+
+    }
+
     return 0;
 }
