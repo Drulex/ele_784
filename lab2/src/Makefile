@@ -6,7 +6,7 @@ PWD		:= $(shell pwd)
 obj-m             = ele784-lab1.o
 ele784-lab1-objs := charDriver.o circularBuffer.o
 
-all: 
+all: charDriver testCharDriver
 
 # We build our module in this section
 charDriver:
