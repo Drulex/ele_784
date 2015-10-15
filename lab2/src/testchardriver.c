@@ -19,7 +19,19 @@
 
 // lazy terminal clearing
 #define CLEAR_TERM  printf("\033[2J\033[1;1H")
+
+// global file descriptor var
 static int fd;
+
+// prototypes
+int menu(void);
+int read_mode(void);
+int write_mode(void);
+int read_non_blocking(void);
+int read_blocking(void);
+int write_non_blocking(void);
+int write_blocking(void);
+int ioctl_call(void);
 
 int main(void) {
     int opened = 0;
