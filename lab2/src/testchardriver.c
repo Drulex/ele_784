@@ -36,7 +36,7 @@ int main(void) {
                 break;
 
             case 3:
-                printf("Not implemented!\n");
+                ioctl_call();
                 break;
 
             case 4:
@@ -211,45 +211,129 @@ int write_mode(void){
     return 0;
 }
 
+int ioctl_call(void){
+    int ioctl_ret, ioctl_cmd, redo, newBufSize;
+    printf("Select an IOCTL command\n");
+    printf("1. Get number of readers\n");
+    printf("2. Get circular buffer data count\n");
+    printf("3. Get circular buffer size\n");
+    printf("4. Get magic number\n");
+    printf("5. Set new circular buffer size\n");
+    scanf("%d", &ioctl_cmd);
+    CLEAR_TERM;
 
+    switch(ioctl_cmd){
+        case 1:
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            ioctl(fd, CHARDRIVER_GETNUMREADER, &ioctl_ret);
+            printf("Number of readers is: %i\n\n", ioctl_ret);
+            printf("Send another command?\n");
+            printf("1. Yes\n");
+            printf("2. No\n");
+            scanf("%d", &redo);
+            if(redo == 1)
+                ioctl_call();
+            else
+                return 0;
+            break;
 
-    /*
-    // TODO: Tests
-    //
-    // OPEN READ
-    // OPEN WRITE
-    // OPEN READ_WRITE
-    // READ in BLOCKING/NON_BLOCKING
-    // WRITE in BLOCKING/NON_BLOCKING
-    // IOCTL
+        case 2:
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            ioctl(fd, CHARDRIVER_GETNUMDATA, &ioctl_ret);
+            printf("Circular buffer data count is: %i\n\n", ioctl_ret);
+            printf("Send another command?\n");
+            printf("1. Yes\n");
+            printf("2. No\n");
+            scanf("%d", &redo);
+            if(redo == 1)
+                ioctl_call();
+            else
+                return 0;
+            break;
 
-    int fd1, fd2, fd3, fd4, fd5;
-    char *bufOut;
-    int ret, len;
+        case 3:
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            ioctl(fd, CHARDRIVER_GETBUFSIZE, &ioctl_ret);
+            printf("Circular buffer size is: %i\n\n", ioctl_ret);
+            printf("Send another command?\n");
+            printf("1. Yes\n");
+            printf("2. No\n");
+            scanf("%d", &redo);
+            if(redo == 1)
+                ioctl_call();
+            else
+                return 0;
+            break;
 
-    char bufIn[] = "test_data";
-    len = strlen(bufIn);
-    fd1 = open(DEVICE_NODE, O_RDWR); // Open in READ ONLY
+        case 4:
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            ioctl(fd, CHARDRIVER_GETMAGICNUMBER, &ioctl_ret);
+            printf("Magic number is: %c\n\n", (char)ioctl_ret);
+            printf("Send another command?\n");
+            printf("1. Yes\n");
+            printf("2. No\n");
+            scanf("%d", &redo);
+            if(redo == 1)
+                ioctl_call();
+            else
+                return 0;
+            break;
 
-    if(fd1)
-        printf("Opened in READ/WRITE\n");
-    else
-        return fd1;
-
-    printf("Writing %i bytes to device\n", len);
-    ret = write(fd1, bufIn, len);
-    if (ret != len){
-        printf("Error writing to device!\n");
+        case 5:
+            printf("Please input new circular buffer size\n");
+            scanf("%d", &newBufSize);
+            fd = open(DEVICE_NODE, O_WRONLY);
+            if(fd){
+                printf("Device succesfully openend in O_WRONLY mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_WRONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            ioctl(fd, CHARDRIVER_SETBUFSIZE, newBufSize);
+            printf("Set new circular buffer size to: %i\n\n", newBufSize);
+            printf("Send another command?\n");
+            printf("1. Yes\n");
+            printf("2. No\n");
+            scanf("%d", &redo);
+            if(redo == 1)
+                ioctl_call();
+            else
+                return 0;
+            break;
     }
-
-    printf("Reading %i bytes from device\n", len);
-    ret = read(fd1, &bufOut, len);
-    if (ret != len){
-        printf("Error reading from device!\n");
-    }
-    printf("%s\n", bufOut);
-
-    close(fd1);
-
-    exit(0);
-    */
+    return 0;
+}
