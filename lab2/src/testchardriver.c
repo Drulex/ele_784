@@ -107,14 +107,15 @@ int read_non_blocking(void){
         // add string terminating char
         bufOut[numBytes] = '\0';
         printf("Return value of read syscall: %i\n", ret);
-        printf("Read from buffer: %s\n\n", bufOut);
-        while(ret != numBytes){
+        //printf("Read from buffer: %s\n\n", bufOut);
+        while(ret != numBytes && ret != 0){
             numBytes = numBytes - ret;
-            ret = read(fd, &bufOut[ret - 1], numBytes);
-            bufOut[numBytes] = '\0';
+            ret = read(fd, &bufOut[ret -1], numBytes);
+            //bufOut[numBytes] = '\0';
             printf("Return value of read syscall: %i\n", ret);
-            printf("Read from buffer: %s\n\n", bufOut);
+            //printf("Read from buffer: %s\n\n", bufOut);
         }
+        printf("Read from buffer: %s\n\n", bufOut);
     }
     else{
         printf("Error using file descriptor!\n");
@@ -186,13 +187,14 @@ int write_non_blocking(void){
     if(fd){
         ret = write(fd, &bufIn, numBytes);
         printf("Return value of write syscall: %i\n", ret);
-        printf("Write to buffer: %s\n\n", bufIn);
+        //printf("Write to buffer: %s\n\n", bufIn);
         while(ret != numBytes){
             numBytes = numBytes - ret;
             ret = write(fd, &bufIn[ret - 1], numBytes);
             printf("Return value of write syscall: %i\n", ret);
-            printf("Write to buffer: %s\n\n", bufIn);
+            //printf("Write to buffer: %s\n\n", bufIn);
         }
+        printf("Write to buffer: %s\n\n", bufIn);
     }
     else{
         printf("Error using file descriptor!\n");
