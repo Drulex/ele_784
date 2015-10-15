@@ -7,6 +7,9 @@ references/
 *.order
 *.symvers
 lab2/src/.tmp_versions/
+.vagrant/
+restart_vm.sh
 .metadata/
 *.swp
 .project
+testchardriver
