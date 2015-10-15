@@ -46,8 +46,6 @@ typedef struct {
     unsigned int circularBufferSize;
     dev_t dev;
     struct cdev cdev;
-    wait_queue_head_t in_q; // wait queue for reader
-	wait_queue_head_t out_q; // wait queue for writer
 } charDriverDev;
 
 // Module Information
@@ -134,10 +132,6 @@ static int __init charDriver_init(void) {
         charStruct->ReadBuf[i] = '\0';
         charStruct->WriteBuf[i] = '\0';
     }
-
-    printk(KERN_WARNING "===charDriver_init: initializing R/W wait queues\n");
-    init_waitqueue_head(&charStruct->in_q);
-    init_waitqueue_head(&charStruct->out_q);
 
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
@@ -261,69 +255,43 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
     printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
-    if(down_interruptible(&charStruct->SemBuf)) // locking circular buffer access
-    	return -ERESTARTSYS;
     // if circular buffer is empty we exit
-    // ideally we put the waiting users in a wait_queue
-    while(!circularBufferDataCount(Buffer)){
+    if(!circularBufferDataCount(Buffer)){
         printk(KERN_WARNING "===charDriver_read: circular buffer empty!\n");
-        printk(KERN_WARNING "===charDriver_read: going to sleep!\n");
-
-        up(&charStruct->SemBuf); // unlocking circular buffer access
-
-        if(wait_event_interruptible(charStruct->in_q,circularBufferDataCount(Buffer))) // getting an error here when building
-        	return -ERESTARTSYS;
-
-        if(down_interruptible(&charStruct->SemBuf)) // locking circular buffer access
-            return -ERESTARTSYS;
-        //return 0;
+        return 0;
     }
 
     // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
     if(count >= READWRITE_BUFSIZE){
-
         while(i<READWRITE_BUFSIZE && !buf_retcode){
-
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
-
         printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
         printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", (int) READWRITE_BUFSIZE);
-
         if (copy_to_user(ubuf, charStruct->ReadBuf, READWRITE_BUFSIZE)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
-
-        // Wake up writers and return
-        wake_up_interruptible(&charStruct->out_q);
         return READWRITE_BUFSIZE;
     }
 
     // else we return in one chunk
     else{
-
         while(i<count && !buf_retcode){
-
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
-
         printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
         ReadBuf_size = (int) strlen(charStruct->ReadBuf);
         printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", ReadBuf_size);
-
         if (copy_to_user(ubuf, charStruct->ReadBuf, ReadBuf_size)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
-
-        // Wake up writers and return
-        wake_up_interruptible(&charStruct->out_q);
-        return count;
+    return count;
     }
 }
 
