@@ -107,13 +107,10 @@ int read_non_blocking(void){
         // add string terminating char
         bufOut[numBytes] = '\0';
         printf("Return value of read syscall: %i\n", ret);
-        //printf("Read from buffer: %s\n\n", bufOut);
         while(ret != numBytes && ret != 0){
             numBytes = numBytes - ret;
             ret = read(fd, &bufOut[ret -1], numBytes);
-            //bufOut[numBytes] = '\0';
             printf("Return value of read syscall: %i\n", ret);
-            //printf("Read from buffer: %s\n\n", bufOut);
         }
         printf("Read from buffer: %s\n\n", bufOut);
     }
@@ -125,8 +122,10 @@ int read_non_blocking(void){
     printf("1. Yes\n");
     printf("2. No\n");
     scanf("%d", &redo);
-    if(redo == 1)
+    if(redo == 1){
+        CLEAR_TERM;
         read_non_blocking();
+    }
     else
         return 0;
 }
@@ -187,12 +186,10 @@ int write_non_blocking(void){
     if(fd){
         ret = write(fd, &bufIn, numBytes);
         printf("Return value of write syscall: %i\n", ret);
-        //printf("Write to buffer: %s\n\n", bufIn);
         while(ret != numBytes){
             numBytes = numBytes - ret;
             ret = write(fd, &bufIn[ret - 1], numBytes);
             printf("Return value of write syscall: %i\n", ret);
-            //printf("Write to buffer: %s\n\n", bufIn);
         }
         printf("Write to buffer: %s\n\n", bufIn);
     }
@@ -204,8 +201,10 @@ int write_non_blocking(void){
     printf("1. Yes\n");
     printf("2. No\n");
     scanf("%d", &redo);
-    if(redo == 1)
+    if(redo == 1){
+        CLEAR_TERM;
         write_non_blocking();
+    }
     else
         return 0;
 }
@@ -268,8 +267,10 @@ int ioctl_call(void){
             printf("1. Yes\n");
             printf("2. No\n");
             scanf("%d", &redo);
-            if(redo == 1)
+            if(redo == 1){
+                CLEAR_TERM;
                 ioctl_call();
+            }
             else
                 return 0;
             break;
@@ -290,8 +291,10 @@ int ioctl_call(void){
             printf("1. Yes\n");
             printf("2. No\n");
             scanf("%d", &redo);
-            if(redo == 1)
+            if(redo == 1){
+                CLEAR_TERM;
                 ioctl_call();
+            }
             else
                 return 0;
             break;
@@ -312,8 +315,10 @@ int ioctl_call(void){
             printf("1. Yes\n");
             printf("2. No\n");
             scanf("%d", &redo);
-            if(redo == 1)
+            if(redo == 1){
+                CLEAR_TERM;
                 ioctl_call();
+            }
             else
                 return 0;
             break;
@@ -334,8 +339,10 @@ int ioctl_call(void){
             printf("1. Yes\n");
             printf("2. No\n");
             scanf("%d", &redo);
-            if(redo == 1)
+            if(redo == 1){
+                CLEAR_TERM;
                 ioctl_call();
+            }
             else
                 return 0;
             break;
@@ -358,11 +365,19 @@ int ioctl_call(void){
             printf("1. Yes\n");
             printf("2. No\n");
             scanf("%d", &redo);
-            if(redo == 1)
+            if(redo == 1){
+                CLEAR_TERM;
                 ioctl_call();
+            }
             else
                 return 0;
             break;
+
+        default:
+            printf("**********************************");
+            printf("Command not recognized! Try again!\n");
+            printf("**********************************");
+            ioctl_call();
     }
     return 0;
 }
