@@ -377,8 +377,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
         case CHARDRIVER_GETBUFSIZE:
 
-            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", charStruct->circularBufferSize);
-            put_user(charStruct->circularBufferSize, (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", circularBufferDataSize(Buffer));
+            put_user(circularBufferDataSize(Buffer), (int __user *)arg);
 
             break;
 
@@ -402,8 +402,6 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
         default:
             return -EINVAL;
-
     }
-
     return 0;
 }
