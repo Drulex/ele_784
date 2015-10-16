@@ -135,7 +135,6 @@ static int __init charDriver_init(void) {
 
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
-    printk(KERN_WARNING "===charDriver_init: data count in circular buffer=%u\n", circularBufferDataCount(Buffer));
     return 0;
 }
 
@@ -389,7 +388,6 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
             printk(KERN_WARNING "===charDriver_ioctl: resizing buffer to %i \n", (int)arg);
             circularBufferResize(Buffer, (int)arg);
-            charStruct->circularBufferSize = (int)arg;
 
             break;
 

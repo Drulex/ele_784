@@ -359,8 +359,10 @@ int ioctl_call(void){
                 printf("Exiting...\n");
                 exit(-1);
             }
-            ioctl(fd, CHARDRIVER_SETBUFSIZE, newBufSize);
-            printf("Set new circular buffer size to: %i\n\n", newBufSize);
+            if(ioctl(fd, CHARDRIVER_SETBUFSIZE, newBufSize) == -1)
+                printf("Error resizing! Size too small!\n");
+            else
+                printf("Set new circular buffer size to: %i\n", newBufSize);
             printf("Send another command?\n");
             printf("1. Yes\n");
             printf("2. No\n");

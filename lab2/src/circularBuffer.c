@@ -81,8 +81,10 @@ int circularBufferResize(BufferHandle_t handle, unsigned int newSize) {
     Buffer_t* buffer = (Buffer_t*) handle;
     char *newBufferData;
     unsigned int oldOutIndex;
-    if(newSize <= buffer->size)
+    if(newSize <= buffer->size){
+        printk(KERN_WARNING "===circularBufferResize: new size is too small!\n");
         return BUFFER_ERROR;
+    }
 
     // print some stuff for debugging
     printk(KERN_WARNING "===circularBuffer_resize: **parameters values before resize**\n");
