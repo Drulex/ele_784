@@ -60,7 +60,8 @@ int main(void) {
                 printf("Command not recognized! Exiting\n");
                 exit(-1);
         }
-        close(fd);
+        if(fd)
+            close(fd);
     }
 }
 
@@ -157,6 +158,7 @@ int read_mode(void){
             read_non_blocking();
             break;
     }
+    close(fd);
     return 0;
 }
 
@@ -236,11 +238,13 @@ int write_mode(void){
             write_non_blocking();
             break;
     }
+    close(fd);
     return 0;
 }
 
 int ioctl_call(void){
-    int ioctl_ret, ioctl_cmd, redo, newBufSize;
+    int ioctl_ret, ioctl_cmd, redo;
+    unsigned int newBufSize;
     printf("Select an IOCTL command\n");
     printf("1. Get number of readers\n");
     printf("2. Get circular buffer data count\n");
@@ -249,6 +253,8 @@ int ioctl_call(void){
     printf("5. Set new circular buffer size\n");
     scanf("%d", &ioctl_cmd);
     CLEAR_TERM;
+    if(fd)
+        close(fd);
 
     switch(ioctl_cmd){
         case 1:
@@ -359,10 +365,10 @@ int ioctl_call(void){
                 printf("Exiting...\n");
                 exit(-1);
             }
-            if(ioctl(fd, CHARDRIVER_SETBUFSIZE, newBufSize) == -1)
-                printf("Error resizing! Size too small!\n");
-            else
+            if(!ioctl(fd, CHARDRIVER_SETBUFSIZE, newBufSize))
                 printf("Set new circular buffer size to: %i\n", newBufSize);
+            else
+                printf("Error resizing! Size too small!\n");
             printf("Send another command?\n");
             printf("1. Yes\n");
             printf("2. No\n");
@@ -376,9 +382,9 @@ int ioctl_call(void){
             break;
 
         default:
-            printf("**********************************");
+            printf("**********************************\n");
             printf("Command not recognized! Try again!\n");
-            printf("**********************************");
+            printf("**********************************\n");
             ioctl_call();
     }
     return 0;

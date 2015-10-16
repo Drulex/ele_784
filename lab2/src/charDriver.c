@@ -227,14 +227,14 @@ static int charDriver_release(struct inode *inode, struct file *filp) {
         case O_WRONLY:
             // write only
             // release semaphore
-            up(&charStruct->SemBuf);
+            //up(&charStruct->SemBuf);
             charStruct->numWriter--;
             break;
 
         case O_RDWR:
             // read/write
             // release semaphore
-            up(&charStruct->SemBuf);
+            //up(&charStruct->SemBuf);
             charStruct->numReader--;
             charStruct->numWriter--;
             break;
@@ -387,7 +387,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 return -EPERM;
 
             printk(KERN_WARNING "===charDriver_ioctl: resizing buffer to %i \n", (int)arg);
-            circularBufferResize(Buffer, (int)arg);
+            if(circularBufferResize(Buffer, (unsigned int)arg))
+                return -EINVAL;
 
             break;
 
