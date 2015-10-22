@@ -1,0 +1,30 @@
+ELE784 - Lab1 charDriver kernel module
+======================================
+(this file does not use markdown formatting)
+
+
+To compile the project:
+=======================
+    1. make charDriver (for charDriver module only)
+    2. make testchardriver (for user app only)
+    3. make all (for both)
+    4. make clean (to clean build)
+
+
+Project directory structure:
+============================
+.
+├── README (this file)
+└── src
+    ├── charDriver.c (source code for driver)
+    ├── charDriver.h (header file)
+    ├── circularBuffer.c
+    ├── circularBuffer.h
+    ├── Makefile
+    └── testchardriver.c (user application)
+
+Known bugs and limitation:
+==========================
+    1. Test app does not do any sanition on user input therefore do not feed it unexpected data.
+    2. Test app in write mode: user input cannot contain whitespace characters.
+    3. No instructions provided with test app as it is very verbose and straightforward to use.
