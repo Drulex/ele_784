@@ -137,6 +137,8 @@ static int __init charDriver_init(void) {
         charStruct->ReadBuf[i] = '\0';
         charStruct->WriteBuf[i] = '\0';
     }
+    charStruct->numWriter = 0;
+    charStruct->numReader = 0;
 
     // init circular buffer
     Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
@@ -285,6 +287,8 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
 
     // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
     if(count >= READWRITE_BUFSIZE){
+        if(down_interruptible(&SemReadBuf))
+            return -ERESTARTSYS;
         while(i<READWRITE_BUFSIZE && !buf_retcode){
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
@@ -296,11 +300,16 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
+        up(&SemReadBuf);
+        up(&charStruct->SemBuf);
+        wake_up_interruptible(&charStruct->outq); // Wakeup the writers
         return READWRITE_BUFSIZE;
     }
 
     // else we return in one chunk
     else{
+        if(down_interruptible(&SemReadBuf))
+            return -ERESTARTSYS;
         while(i<count && !buf_retcode){
             buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
@@ -313,10 +322,11 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
-    return count;
+        up(&SemReadBuf);
+        up(&charStruct->SemBuf);
+        wake_up_interruptible(&charStruct->outq); // Wakeup the writers
+        return count;
     }
-
-    wake_up_interruptible(&charStruct->outq); // Wakeup the writers
 }
 
 
@@ -325,8 +335,10 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     int buf_retcode = 0;
     printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
 
-    if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to write
+    if(down_interruptible(&charStruct->SemBuf)){
+        printk(KERN_WARNING "===charDriver_write: unable to acquire SemBuf\n");
     	return -ERESTARTSYS;
+    }
 
     while(!circularBufferDataRemaining(Buffer)){ // while the circular buffer is full
     	printk(KERN_WARNING "===charDriver_write: circular buffer is full\n");
@@ -346,6 +358,8 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
 
     // in case user sends more bytes than size of READWRITE_BUFSIZE we write in chunks
     if (count > READWRITE_BUFSIZE){
+        if(down_interruptible(&SemWriteBuf))
+            return -ERESTARTSYS;
         if(copy_from_user(charStruct->WriteBuf, ubuf, READWRITE_BUFSIZE)){
             printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
             return -EFAULT;
@@ -363,12 +377,18 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             printk(KERN_WARNING "===charDriver_write: circularBuffer FULL!");
             return 0;
         }
-        else
+        else{
+            up(&SemWriteBuf);
+            up(&charStruct->SemBuf);
+            wake_up_interruptible(&charStruct->inq); // Wakeup the readers
             return i;
+        }
     }
 
     // else we write it in one chunk
     else{
+        if(down_interruptible(&SemWriteBuf))
+            return -ERESTARTSYS;
         if(copy_from_user(charStruct->WriteBuf, ubuf, count)){
             printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
             return -EFAULT;
@@ -384,11 +404,13 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             printk(KERN_WARNING "===charDriver_write: circularBuffer FULL!");
             return 0;
         }
-        else
+        else{
+            up(&SemWriteBuf);
+            up(&charStruct->SemBuf);
+            wake_up_interruptible(&charStruct->inq); // Wakeup the readers
             return count;
+        }
     }
-
-    wake_up_interruptible(&charStruct->inq); // Wakeup the readers
 }
 
 
@@ -433,9 +455,11 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 return -EPERM;
 
             printk(KERN_WARNING "===charDriver_ioctl: resizing buffer to %i \n", (int)arg);
+            if(down_interruptible(&charStruct->SemBuf))
+                return -ERESTARTSYS;
             if(circularBufferResize(Buffer, (unsigned int)arg))
                 return -EINVAL;
-
+            up(&charStruct->SemBuf);
             break;
 
         case CHARDRIVER_GETMAGICNUMBER:
