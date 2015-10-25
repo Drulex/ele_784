@@ -95,11 +95,11 @@ int read_(void){
         ret = read(fd, &bufOut, numBytes);
         // add string terminating char
         bufOut[numBytes] = '\0';
-        printf("Return value of read syscall: %i\n", ret);
+        //printf("Return value of read syscall: %i\n", ret);
         while(ret != numBytes && ret != 0){
             numBytes = numBytes - ret;
             ret = read(fd, &bufOut[ret -1], numBytes);
-            printf("Return value of read syscall: %i\n", ret);
+            //printf("Return value of read syscall: %i\n", ret);
         }
         printf("Read from buffer: %s\n\n", bufOut);
     }
@@ -175,11 +175,11 @@ int write_(void){
 
     if(fd){
         ret = write(fd, &bufIn, numBytes);
-        printf("Return value of write syscall: %i\n", ret);
+        //printf("Return value of write syscall: %i\n", ret);
         while(ret != numBytes){
             numBytes = numBytes - ret;
             ret = write(fd, &bufIn[ret - 1], numBytes);
-            printf("Return value of write syscall: %i\n", ret);
+            //printf("Return value of write syscall: %i\n", ret);
         }
         printf("Write to buffer: %s\n\n", bufIn);
     }

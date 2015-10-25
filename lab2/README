@@ -25,6 +25,7 @@ Project directory structure:
 
 Known bugs and limitation:
 ==========================
-    1. Test app does not do any sanition on user input therefore do not feed it unexpected data.
-    2. Test app in write mode: user input cannot contain whitespace characters.
-    3. No instructions provided with test app as it is very verbose and straightforward to use.
+    1. Run test app as ROOT!
+    2. Test app does not do any sanition on user input therefore do not feed it unexpected data.
+    3. Test app in write mode: user input cannot contain whitespace characters.
+    4. No instructions provided with test app as it is very verbose and straightforward to use.
