@@ -108,7 +108,7 @@ static int __init charDriver_init(void) {
     charStruct->cdev.owner = THIS_MODULE;
 
     if (cdev_add(&charStruct->cdev, charStruct->dev, 1) < 0)
-        printk(KERN_WARNING"charDriver_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+        printk(KERN_WARNING"===charDriver_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
     // initialize mutex type semaphore for buffer
     printk(KERN_WARNING "===charDriver_init: initializing semaphores and R/W buffers\n");
@@ -125,11 +125,13 @@ static int __init charDriver_init(void) {
         charStruct->ReadBuf[i] = '\0';
         charStruct->WriteBuf[i] = '\0';
     }
+    // init counters to zero
     charStruct->numWriter = 0;
     charStruct->numReader = 0;
 
     // init circular buffer
     charStruct->Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+
     return 0;
 }
 
@@ -242,7 +244,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
     int i = 0;
     int x = 0;
     int buf_retcode = 0;
-    int ReadBuf_size;
+    int readBufferSize;
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
     printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
@@ -296,9 +298,12 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             charStruct->ReadBuf[x] = '\0';
             charStruct->WriteBuf[x] = '\0';
         }
+
+        //  unlock semaphores and wake up writers
         up(&charStruct->SemReadBuf);
         up(&charStruct->SemBuf);
-        wake_up_interruptible(&charStruct->outq); // Wakeup the writers
+        wake_up_interruptible(&charStruct->outq);
+
         return READWRITE_BUFSIZE;
     }
 
@@ -313,9 +318,9 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             i++;
         }
         printk(KERN_WARNING "===charDriver_read: contents of ReadBuf:%s\n", charStruct->ReadBuf);
-        ReadBuf_size = (int) strlen(charStruct->ReadBuf);
-        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", ReadBuf_size);
-        if (copy_to_user(ubuf, charStruct->ReadBuf, ReadBuf_size)){
+        readBufferSize = (int) strlen(charStruct->ReadBuf);
+        printk(KERN_WARNING "===charDriver_read: returning %i available bytes\n", readBufferSize);
+        if (copy_to_user(ubuf, charStruct->ReadBuf, readBufferSize)){
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
             return -EFAULT;
         }
@@ -324,9 +329,12 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             charStruct->ReadBuf[x] = '\0';
             charStruct->WriteBuf[x] = '\0';
         }
+
+        // unlock semaphores and  wake up writers
         up(&charStruct->SemReadBuf);
         up(&charStruct->SemBuf);
-        wake_up_interruptible(&charStruct->outq); // Wakeup the writers
+        wake_up_interruptible(&charStruct->outq);
+
         return count;
     }
 }
@@ -334,7 +342,6 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
 
 static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
     int i = 0;
-    //int x = 0;
     int buf_retcode = 0;
     printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
 
@@ -358,7 +365,6 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(charStruct->Buffer))))
     		return -ERESTARTSYS;
 
-        // lock semaphore to read
     	if(down_interruptible(&charStruct->SemBuf)){
             printk(KERN_WARNING "===charDriver_write: unable to acquire SemBuf (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
             return -ERESTARTSYS;
@@ -389,9 +395,10 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             return 0;
         }
         else{
+            // unlock semaphores and wake up readers
             up(&charStruct->SemWriteBuf);
             up(&charStruct->SemBuf);
-            wake_up_interruptible(&charStruct->inq); // Wakeup the readers
+            wake_up_interruptible(&charStruct->inq);
             return i;
         }
     }
@@ -417,9 +424,10 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             return 0;
         }
         else{
+            // unlock semaphores and wake up readers
             up(&charStruct->SemWriteBuf);
             up(&charStruct->SemBuf);
-            wake_up_interruptible(&charStruct->inq); // Wakeup the readers
+            wake_up_interruptible(&charStruct->inq);
             return count;
         }
     }
@@ -440,29 +448,22 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
     }
 
     switch(cmd) {
-
         case CHARDRIVER_GETNUMDATA:
-
             put_user(circularBufferDataCount(charStruct->Buffer), (int __user *)arg);
             printk(KERN_WARNING "===charDriver_ioctl: data in buffer is: %i \n", circularBufferDataCount(charStruct->Buffer));
-
             break;
 
         case CHARDRIVER_GETNUMREADER:
-
             printk(KERN_WARNING "===charDriver_ioctl: number of readers is: %i \n", charStruct->numReader);
             put_user(charStruct->numReader, (int __user *)arg);
             break;
 
         case CHARDRIVER_GETBUFSIZE:
-
             printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", circularBufferDataSize(charStruct->Buffer));
             put_user(circularBufferDataSize(charStruct->Buffer), (int __user *)arg);
-
             break;
 
         case CHARDRIVER_SETBUFSIZE:
-
             if(!capable(CAP_SYS_ADMIN))
                 return -EPERM;
 
@@ -475,10 +476,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
             break;
 
         case CHARDRIVER_GETMAGICNUMBER:
-
             put_user(CHARDRIVER_IOC_MAGIC, (char __user *)arg);
             printk(KERN_WARNING "===charDriver_ioctl: the magic number is: %c \n", CHARDRIVER_IOC_MAGIC);
-
             break;
 
         default:
