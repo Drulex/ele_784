@@ -91,7 +91,6 @@ int read_(void){
     for(i=0; i<numBytes; i++){
         bufOut[i] = '\0';
     }
-    //TODO
     if(fd){
         ret = read(fd, &bufOut, numBytes);
         // add string terminating char
