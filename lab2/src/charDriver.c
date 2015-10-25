@@ -46,8 +46,10 @@ typedef struct {
     unsigned int circularBufferSize;
     dev_t dev;
     struct cdev cdev;
-    wait_queue_head_t inq, outq;
+    wait_queue_head_t inq;
+    wait_queue_head_t outq;
     struct class *charDriver_class;
+    BufferHandle_t Buffer;
 } charDriverDev;
 
 // Module Information
@@ -79,8 +81,6 @@ module_exit(charDriver_exit);
 
 
 charDriverDev *charStruct;
-
-BufferHandle_t Buffer;
 
 struct semaphore SemReadBuf;
 struct semaphore SemWriteBuf;
@@ -142,7 +142,7 @@ static int __init charDriver_init(void) {
     charStruct->numReader = 0;
 
     // init circular buffer
-    Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
+    charStruct->Buffer = circularBufferInit(CIRCULAR_BUFFER_SIZE);
     return 0;
 }
 
@@ -160,7 +160,7 @@ static void __exit charDriver_exit(void) {
     printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
     kfree(charStruct);
 
-    if(circularBufferDelete(Buffer))
+    if(circularBufferDelete(charStruct->Buffer))
         printk(KERN_WARNING "===charDriver_exit: Unable to delete circular buffer\n");
     else
         printk(KERN_WARNING "===charDriver_exit: deleting circular buffer\n");
@@ -268,7 +268,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
     	return -ERESTARTSYS;
 
     // if circular buffer is empty we exit
-    while(!circularBufferDataCount(Buffer)){ // While there's nothing to read in the circular bufer
+    while(!circularBufferDataCount(charStruct->Buffer)){ // While there's nothing to read in the circular bufer
         printk(KERN_WARNING "===charDriver_read: circular buffer empty!\n");
 
         // unlock semaphore
@@ -278,7 +278,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
         	return -EAGAIN;
 
         printk(KERN_WARNING "===charDriver_read: putting reader to sleep\n");
-        if(wait_event_interruptible(charStruct->inq, (circularBufferDataCount(Buffer) > 0)))
+        if(wait_event_interruptible(charStruct->inq, (circularBufferDataCount(charStruct->Buffer) > 0)))
         	return -ERESTARTSYS;
 
         if(down_interruptible(&charStruct->SemBuf))
@@ -292,7 +292,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
         if(down_interruptible(&SemReadBuf))
             return -ERESTARTSYS;
         while(i<READWRITE_BUFSIZE && !buf_retcode){
-            buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
+            buf_retcode = circularBufferOut(charStruct->Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
@@ -318,7 +318,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
         if(down_interruptible(&SemReadBuf))
             return -ERESTARTSYS;
         while(i<count && !buf_retcode){
-            buf_retcode = circularBufferOut(Buffer, &charStruct->ReadBuf[i]);
+            buf_retcode = circularBufferOut(charStruct->Buffer, &charStruct->ReadBuf[i]);
             printk(KERN_WARNING "===charDriver_read: circularBufferOut=%i\n", buf_retcode);
             i++;
         }
@@ -353,7 +353,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     	return -ERESTARTSYS;
     }
 
-    while(!circularBufferDataRemaining(Buffer)){ // while the circular buffer is full
+    while(!circularBufferDataRemaining(charStruct->Buffer)){ // while the circular buffer is full
     	printk(KERN_WARNING "===charDriver_write: circular buffer is full\n");
 
     	up(&charStruct->SemBuf); // unlock semaphore
@@ -362,7 +362,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     		return -EAGAIN;
 
     	printk(KERN_WARNING "===charDriver_write: putting writer to sleep\n");
-    	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(Buffer))))
+    	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(charStruct->Buffer))))
     		return -ERESTARTSYS;
 
     	if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to read
@@ -379,7 +379,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
         }
         // push data in circular buffer
         while(i<READWRITE_BUFSIZE && buf_retcode != -1){
-            buf_retcode = circularBufferIn(Buffer, charStruct->WriteBuf[i]);
+            buf_retcode = circularBufferIn(charStruct->Buffer, charStruct->WriteBuf[i]);
             printk(KERN_WARNING "===charDriver_write: circularBufferIn=%i\n", buf_retcode);
             i++;
         }
@@ -407,7 +407,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             return -EFAULT;
         }
         while(i<count && buf_retcode != -1){
-            buf_retcode = circularBufferIn(Buffer, charStruct->WriteBuf[i]);
+            buf_retcode = circularBufferIn(charStruct->Buffer, charStruct->WriteBuf[i]);
             printk(KERN_WARNING "===charDriver_write: circularBufferIn=%i\n", buf_retcode);
             i++;
         }
@@ -444,8 +444,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
         case CHARDRIVER_GETNUMDATA:
 
-            put_user(circularBufferDataCount(Buffer), (int __user *)arg);
-            printk(KERN_WARNING "===charDriver_ioctl: data in buffer is: %i \n", circularBufferDataCount(Buffer));
+            put_user(circularBufferDataCount(charStruct->Buffer), (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: data in buffer is: %i \n", circularBufferDataCount(charStruct->Buffer));
 
             break;
 
@@ -457,8 +457,8 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
         case CHARDRIVER_GETBUFSIZE:
 
-            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", circularBufferDataSize(Buffer));
-            put_user(circularBufferDataSize(Buffer), (int __user *)arg);
+            printk(KERN_WARNING "===charDriver_ioctl: size of buffer is: %i \n", circularBufferDataSize(charStruct->Buffer));
+            put_user(circularBufferDataSize(charStruct->Buffer), (int __user *)arg);
 
             break;
 
@@ -470,7 +470,7 @@ static long charDriver_ioctl(struct file *filp, unsigned int cmd, unsigned long 
             printk(KERN_WARNING "===charDriver_ioctl: resizing buffer to %i \n", (int)arg);
             if(down_interruptible(&charStruct->SemBuf))
                 return -ERESTARTSYS;
-            if(circularBufferResize(Buffer, (unsigned int)arg))
+            if(circularBufferResize(charStruct->Buffer, (unsigned int)arg))
                 return -EINVAL;
             up(&charStruct->SemBuf);
             break;
