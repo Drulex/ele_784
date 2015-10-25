@@ -328,7 +328,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to write
     	return -ERESTARTSYS;
 
-    while(circularBufferDataRemaining(Buffer) == circularBufferDataCount(Buffer)){ // while the circular buffer is full
+    while(!circularBufferDataRemaining(Buffer)){ // while the circular buffer is full
     	printk(KERN_WARNING "===charDriver_write: circular buffer is full\n");
 
     	up(&charStruct->SemBuf); // unlock semaphore
@@ -337,7 +337,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     		return -EAGAIN;
 
     	printk(KERN_WARNING "===charDriver_write: putting writer to sleep\n");
-    	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(Buffer) != circularBufferDataCount(Buffer))))
+    	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(Buffer))))
     		return -ERESTARTSYS;
 
     	if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to read
