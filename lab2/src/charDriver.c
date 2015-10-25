@@ -41,6 +41,8 @@ typedef struct {
     char ReadBuf[READWRITE_BUFSIZE];
     char WriteBuf[READWRITE_BUFSIZE];
     struct semaphore SemBuf;
+    struct semaphore SemReadBuf;
+    struct semaphore SemWriteBuf;
     unsigned short numWriter;
     unsigned short numReader;
     unsigned int circularBufferSize;
@@ -79,11 +81,7 @@ static struct file_operations charDriver_fops = {
 module_init(charDriver_init);
 module_exit(charDriver_exit);
 
-
 charDriverDev *charStruct;
-
-struct semaphore SemReadBuf;
-struct semaphore SemWriteBuf;
 
 static int __init charDriver_init(void) {
 
@@ -126,8 +124,8 @@ static int __init charDriver_init(void) {
     printk(KERN_WARNING "===charDriver_init: initializing semaphores and R/W buffers\n");
     // initialize mutex type semaphore for buffer
     sema_init(&charStruct->SemBuf, 1);
-    sema_init(&SemReadBuf, 1);
-    sema_init(&SemWriteBuf, 1);
+    sema_init(&charStruct->SemReadBuf, 1);
+    sema_init(&charStruct->SemWriteBuf, 1);
 
     printk(KERN_WARNING "===charDriver_init: initializing wait queue items\n");
     init_waitqueue_head(&charStruct->inq);
@@ -289,7 +287,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
 
     // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
     if(count >= READWRITE_BUFSIZE){
-        if(down_interruptible(&SemReadBuf))
+        if(down_interruptible(&charStruct->SemReadBuf))
             return -ERESTARTSYS;
         while(i<READWRITE_BUFSIZE && !buf_retcode){
             buf_retcode = circularBufferOut(charStruct->Buffer, &charStruct->ReadBuf[i]);
@@ -307,7 +305,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             charStruct->ReadBuf[x] = '\0';
             charStruct->WriteBuf[x] = '\0';
         }
-        up(&SemReadBuf);
+        up(&charStruct->SemReadBuf);
         up(&charStruct->SemBuf);
         wake_up_interruptible(&charStruct->outq); // Wakeup the writers
         return READWRITE_BUFSIZE;
@@ -315,7 +313,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
 
     // else we return in one chunk
     else{
-        if(down_interruptible(&SemReadBuf))
+        if(down_interruptible(&charStruct->SemReadBuf))
             return -ERESTARTSYS;
         while(i<count && !buf_retcode){
             buf_retcode = circularBufferOut(charStruct->Buffer, &charStruct->ReadBuf[i]);
@@ -334,7 +332,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             charStruct->ReadBuf[x] = '\0';
             charStruct->WriteBuf[x] = '\0';
         }
-        up(&SemReadBuf);
+        up(&charStruct->SemReadBuf);
         up(&charStruct->SemBuf);
         wake_up_interruptible(&charStruct->outq); // Wakeup the writers
         return count;
@@ -371,7 +369,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
 
     // in case user sends more bytes than size of READWRITE_BUFSIZE we write in chunks
     if (count > READWRITE_BUFSIZE){
-        if(down_interruptible(&SemWriteBuf))
+        if(down_interruptible(&charStruct->SemWriteBuf))
             return -ERESTARTSYS;
         if(copy_from_user(charStruct->WriteBuf, ubuf, READWRITE_BUFSIZE)){
             printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
@@ -391,7 +389,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             return 0;
         }
         else{
-            up(&SemWriteBuf);
+            up(&charStruct->SemWriteBuf);
             up(&charStruct->SemBuf);
             wake_up_interruptible(&charStruct->inq); // Wakeup the readers
             return i;
@@ -400,7 +398,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
 
     // else we write it in one chunk
     else{
-        if(down_interruptible(&SemWriteBuf))
+        if(down_interruptible(&charStruct->SemWriteBuf))
             return -ERESTARTSYS;
         if(copy_from_user(charStruct->WriteBuf, ubuf, count)){
             printk(KERN_WARNING "===charDriver_write: error while copying data from user space\n");
@@ -418,7 +416,7 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
             return 0;
         }
         else{
-            up(&SemWriteBuf);
+            up(&charStruct->SemWriteBuf);
             up(&charStruct->SemBuf);
             wake_up_interruptible(&charStruct->inq); // Wakeup the readers
             return count;
