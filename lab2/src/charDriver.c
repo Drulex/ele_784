@@ -256,6 +256,7 @@ static int charDriver_release(struct inode *inode, struct file *filp) {
 
 static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
     int i = 0;
+    int x = 0;
     int buf_retcode = 0;
     int ReadBuf_size;
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
@@ -300,6 +301,11 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
+        // flush buffer
+        for(x=0; x<READWRITE_BUFSIZE; x++){
+            charStruct->ReadBuf[x] = '\0';
+            charStruct->WriteBuf[x] = '\0';
+        }
         up(&SemReadBuf);
         up(&charStruct->SemBuf);
         wake_up_interruptible(&charStruct->outq); // Wakeup the writers
@@ -322,6 +328,11 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
             printk(KERN_WARNING "===charDriver_read: error while copying data from kernel space\n");
             return -EFAULT;
         }
+        // flush buffer
+        for(x=0; x<READWRITE_BUFSIZE; x++){
+            charStruct->ReadBuf[x] = '\0';
+            charStruct->WriteBuf[x] = '\0';
+        }
         up(&SemReadBuf);
         up(&charStruct->SemBuf);
         wake_up_interruptible(&charStruct->outq); // Wakeup the writers
@@ -332,6 +343,7 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
 
 static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
     int i = 0;
+    int x = 0;
     int buf_retcode = 0;
     printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
 
