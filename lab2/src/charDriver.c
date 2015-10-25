@@ -46,10 +46,11 @@ typedef struct {
     unsigned int circularBufferSize;
     dev_t dev;
     struct cdev cdev;
+    wait_queue_head_t inq, outq;
 } charDriverDev;
 
 // Module Information
-MODULE_AUTHOR("JORA Alexandru, MUKANDILA, Mukandila");
+MODULE_AUTHOR("JORA Alexandru, MUKANDILA Mukandila");
 MODULE_LICENSE("Dual BSD/GPL");
 
 // Prototypes
@@ -126,6 +127,10 @@ static int __init charDriver_init(void) {
     sema_init(&charStruct->SemBuf, 1);
     sema_init(&SemReadBuf, 1);
     sema_init(&SemWriteBuf, 1);
+
+    printk(KERN_WARNING "===charDriver_init: initializing wait queue items\n");
+    init_waitqueue_head(&charStruct->inq);
+    init_waitqueue_head(&charStruct->outq);
 
     // flush read/write buffers
     for(i=0; i<READWRITE_BUFSIZE; i++){
@@ -254,11 +259,29 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
     printk(KERN_WARNING "===charDriver_read: entering READ function\n");
     printk(KERN_WARNING "===charDriver_read: bytes requested by user=%i\n", (int) count);
 
+    // lock semaphore
+    if(down_interruptible(&charStruct->SemBuf))
+    	return -ERESTARTSYS;
+
     // if circular buffer is empty we exit
-    if(!circularBufferDataCount(Buffer)){
+    while(!circularBufferDataCount(Buffer)){ // While there's nothing to read in the circular bufer
         printk(KERN_WARNING "===charDriver_read: circular buffer empty!\n");
-        return 0;
-    }
+
+        // unlock semaphore
+        up(&charStruct->SemBuf);
+
+        if(filp->f_flags & O_NONBLOCK) // Open in non-blocking
+        	return -EAGAIN;
+
+        printk(KERN_WARNING "===charDriver_read: putting reader to sleep\n");
+        if(wait_event_interruptible(charStruct->inq, (circularBufferDataCount(Buffer) > 0)))
+        	return -ERESTARTSYS;
+
+        if(down_interruptible(&charStruct->SemBuf))
+        	return -ERESTARTSYS;
+
+        //return 0;
+    } // Data in the buffer, handle it
 
     // if user requests too many bytes we return multiple chunks of READWRITE_BUFSIZE
     if(count >= READWRITE_BUFSIZE){

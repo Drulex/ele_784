@@ -9,7 +9,7 @@
 #include "charDriver.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <linux/fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
