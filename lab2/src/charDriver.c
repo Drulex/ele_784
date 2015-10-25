@@ -315,6 +315,8 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
         }
     return count;
     }
+
+    wake_up_interruptible(&charStruct->outq); // Wakeup the writers
 }
 
 
@@ -322,6 +324,25 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
     int i = 0;
     int buf_retcode = 0;
     printk(KERN_WARNING "===charDriver_write: entering WRITE function\n");
+
+    if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to write
+    	return -ERESTARTSYS;
+
+    while(circularBufferDataRemaining(Buffer) == circularBufferDataCount(Buffer)){ // while the circular buffer is full
+    	printk(KERN_WARNING "===charDriver_write: circular buffer is full\n");
+
+    	up(&charStruct->SemBuf); // unlock semaphore
+
+    	if(filp->f_flags & O_NONBLOCK) // Open in non-blocking
+    		return -EAGAIN;
+
+    	printk(KERN_WARNING "===charDriver_write: putting writer to sleep\n");
+    	if(wait_event_interruptible(charStruct->outq, (circularBufferDataRemaining(Buffer) != circularBufferDataCount(Buffer))))
+    		return -ERESTARTSYS;
+
+    	if(down_interruptible(&charStruct->SemBuf)) // lock semaphore to read
+    	    return -ERESTARTSYS;
+    } // space in the buffer
 
     // in case user sends more bytes than size of READWRITE_BUFSIZE we write in chunks
     if (count > READWRITE_BUFSIZE){
@@ -366,6 +387,8 @@ static ssize_t charDriver_write(struct file *filp, const char __user *ubuf, size
         else
             return count;
     }
+
+    wake_up_interruptible(&charStruct->inq); // Wakeup the readers
 }
 
 
