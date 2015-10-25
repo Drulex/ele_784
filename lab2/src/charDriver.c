@@ -47,6 +47,7 @@ typedef struct {
     dev_t dev;
     struct cdev cdev;
     wait_queue_head_t inq, outq;
+    struct class *charDriver_class;
 } charDriverDev;
 
 // Module Information
@@ -76,7 +77,7 @@ static struct file_operations charDriver_fops = {
 module_init(charDriver_init);
 module_exit(charDriver_exit);
 
-struct class *charDriver_class;
+
 charDriverDev *charStruct;
 
 BufferHandle_t Buffer;
@@ -109,10 +110,10 @@ static int __init charDriver_init(void) {
         printk(KERN_WARNING"===charDriver_init: MAJOR = %u MINOR = %u\n", MAJOR(charStruct->dev), MINOR(charStruct->dev));
 
     printk(KERN_WARNING"===charDriver_init: Creating charDriver Class\n");
-    charDriver_class = class_create(THIS_MODULE, "charDriverClass");
+    charStruct->charDriver_class = class_create(THIS_MODULE, "charDriverClass");
 
     printk(KERN_WARNING"===charDriver_init: Creating charDriver_Node\n");
-    device_create(charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
+    device_create(charStruct->charDriver_class, NULL, charStruct->dev, NULL, "charDriver_Node");
 
     printk(KERN_WARNING"===charDriver_init: cdev INIT\n");
     cdev_init(&charStruct->cdev, &charDriver_fops);
@@ -151,9 +152,9 @@ static void __exit charDriver_exit(void) {
     printk(KERN_WARNING"===charDriver_exit: cdev DELETE\n");
     cdev_del(&charStruct->cdev);
     printk(KERN_WARNING"===charDriver_exit: charDriver_class DEVICE DELETE\n");
-    device_destroy(charDriver_class, charStruct->dev);
+    device_destroy(charStruct->charDriver_class, charStruct->dev);
     printk(KERN_WARNING"===charDriver_exit: charDriver_class DELETE\n");
-    class_destroy(charDriver_class);
+    class_destroy(charStruct->charDriver_class);
     printk(KERN_WARNING"===charDriver_exit: charStruct devno DELETE\n");
     unregister_chrdev_region(charStruct->dev, 1);
     printk(KERN_WARNING"===charDriver_exit: charStruct kfree()\n");
