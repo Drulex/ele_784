@@ -9,7 +9,7 @@
 #include "charDriver.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <linux/fcntl.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -27,10 +27,8 @@ static int fd;
 int menu(void);
 int read_mode(void);
 int write_mode(void);
-int read_non_blocking(void);
-int read_blocking(void);
-int write_non_blocking(void);
-int write_blocking(void);
+int read_(void);
+int write_(void);
 int ioctl_call(void);
 
 int main(void) {
@@ -82,16 +80,7 @@ int menu(void){
     return cmd;
 }
 
-int read_blocking(void){
-    int numBytes;
-    printf("Reading in blocking mode\n");
-    printf("How many bytes to read?\n");
-    scanf("%d", &numBytes);
-    //TODO
-    return 0;
-}
-
-int read_non_blocking(void){
+int read_(void){
     int numBytes, i, ret;
     int redo = 0;
     printf("Reading in non blocking mode\n");
@@ -125,7 +114,7 @@ int read_non_blocking(void){
     scanf("%d", &redo);
     if(redo == 1){
         CLEAR_TERM;
-        read_non_blocking();
+        read_();
     }
     else
         return 0;
@@ -134,15 +123,6 @@ int read_non_blocking(void){
 int read_mode(void){
     int read_mode;
     read_mode = 0;
-    fd = open(DEVICE_NODE, O_RDONLY);
-    if(fd){
-        printf("Device succesfully openend in O_RDONLY mode\n\n");
-    }
-    else{
-        printf("Error opening device in O_RDONLY mode\n");
-        printf("Exiting...\n");
-        exit(-1);
-    }
     printf("Choose an opening mode\n");
     printf("1. Blocking\n");
     printf("2. Non-blocking\n");
@@ -151,27 +131,36 @@ int read_mode(void){
 
     switch(read_mode){
         case 1:
-            read_blocking();
+            fd = open(DEVICE_NODE, O_RDONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY BLOCKINGmode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            read_();
             break;
 
         case 2:
-            read_non_blocking();
+            fd = open(DEVICE_NODE, O_RDONLY | O_NONBLOCK);
+            if(fd){
+                printf("Device succesfully openend in O_RDONLY NON_BLOCKING mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RDONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            read_();
             break;
     }
     close(fd);
     return 0;
 }
 
-int write_blocking(void){
-    int numBytes;
-    printf("Writing in blocking mode\n");
-    printf("How many bytes to write?\n");
-    scanf("%d", &numBytes);
-    //TODO
-    return 0;
-}
-
-int write_non_blocking(void){
+int write_(void){
     int numBytes, i, ret;
     int redo = 0;
     printf("Writing in non blocking mode\n");
@@ -205,7 +194,7 @@ int write_non_blocking(void){
     scanf("%d", &redo);
     if(redo == 1){
         CLEAR_TERM;
-        write_non_blocking();
+        write_();
     }
     else
         return 0;
@@ -214,15 +203,6 @@ int write_non_blocking(void){
 int write_mode(void){
     int write_mode;
     write_mode = 0;
-    fd = open(DEVICE_NODE, O_WRONLY);
-    if(fd){
-        printf("Device succesfully openend in O_RWONLY mode\n\n");
-    }
-    else{
-        printf("Error opening device in O_RWONLY mode\n");
-        printf("Exiting...\n");
-        exit(-1);
-    }
     printf("Choose an opening mode\n");
     printf("1. Blocking\n");
     printf("2. Non-blocking\n");
@@ -231,11 +211,29 @@ int write_mode(void){
 
     switch(write_mode){
         case 1:
-            write_blocking();
+            fd = open(DEVICE_NODE, O_WRONLY);
+            if(fd){
+                printf("Device succesfully openend in O_RWONLY BLOCKING mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RWONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            write_();
             break;
 
         case 2:
-            write_non_blocking();
+            fd = open(DEVICE_NODE, O_WRONLY | O_NONBLOCK);
+            if(fd){
+                printf("Device succesfully openend in O_RWONLY NON_BLOCKING mode\n\n");
+            }
+            else{
+                printf("Error opening device in O_RWONLY mode\n");
+                printf("Exiting...\n");
+                exit(-1);
+            }
+            write_();
             break;
     }
     close(fd);
