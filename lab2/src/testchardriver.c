@@ -83,7 +83,6 @@ int menu(void){
 int read_(void){
     int numBytes, i, ret;
     int redo = 0;
-    printf("Reading in non blocking mode\n");
     printf("How many bytes to read?\n");
     scanf("%d", &numBytes);
     char bufOut[numBytes];
@@ -162,7 +161,6 @@ int read_mode(void){
 int write_(void){
     int numBytes, i, ret;
     int redo = 0;
-    printf("Writing in non blocking mode\n");
     printf("How many bytes to write?\n");
     scanf("%d", &numBytes);
     char bufIn[numBytes + 1];
