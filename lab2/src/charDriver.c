@@ -262,8 +262,12 @@ static ssize_t charDriver_read(struct file *filp, char __user *ubuf, size_t coun
         up(&charStruct->SemBuf);
 
         // Open in non-blocking
-        if(filp->f_flags & O_NONBLOCK)
-        	return -EAGAIN;
+        if(filp->f_flags & O_NONBLOCK){
+            printk(KERN_WARNING "===charDriver_read: buffer empty opened in O_NONBLOCK\n");
+            return 0;
+            // returning -EAGAIN seems to get the program stuck in infinite loop
+            //return -EAGAIN;
+        }
 
         printk(KERN_WARNING "===charDriver_read: putting reader to sleep\n");
         if(wait_event_interruptible(charStruct->inq, (circularBufferDataCount(charStruct->Buffer) > 0)))
