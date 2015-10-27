@@ -1,2 +1,2 @@
 # ele_784
-Source code for ELE784 lab
+Source code for ELE784 labs
