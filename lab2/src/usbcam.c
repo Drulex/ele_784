@@ -129,7 +129,15 @@ static int __init usbcam_init(void) {
 }
 
 static void __exit usbcam_exit(void) {
-
+    printk(KERN_WARNING "===usbcam_exit: entering exit function\n");
+    printk(KERN_WARNING"===usbcam_exit: cdev DELETE\n");
+    cdev_del(usbcam_dev.cdev);
+    printk(KERN_WARNING"===usbcam_exit: usbdev_class DEVICE DELETE\n");
+    device_destroy(usbcam_dev.usbcam_class, usbcam_dev.dev);
+    printk(KERN_WARNING"===usbcam_exit: usbcam_class DELETE\n");
+    class_destroy(usbcam_dev.usbcam_class);
+    printk(KERN_WARNING"===usbcam_exit: usbcam devno DELETE\n");
+    unregister_chrdev_region(usbcam_dev.dev, 1);
 }
 
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
