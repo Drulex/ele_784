@@ -60,12 +60,9 @@ static struct urb *myUrb[5];
 
 struct usbcam_dev {
 	struct usb_device *usbdev;
-    dev_t dev;
-    struct cdev cdev;
-    struct class *usbcam_class;
 };
 
-
+struct class * my_class;
 
 static struct usb_device_id usbcam_table[] = {
 // { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
@@ -92,10 +89,7 @@ struct file_operations usbcam_fops = {
 	.unlocked_ioctl = usbcam_ioctl,
 };
 
-// driver constants
 #define USBCAM_MINOR 0
-#define DEVICE_NAME "etsele_usbcam"
-
 static struct usb_class_driver usbcam_class = {
 	.name       = "usb/usbcam%d",
 	.fops       = &usbcam_fops,
