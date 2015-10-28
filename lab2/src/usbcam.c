@@ -2,8 +2,8 @@
  * File         : usbcam.c
  * Description  : ELE784 Lab2 source
  *
- * Etudiants:  XXXX00000000 (prenom nom #1)
- *             XXXX00000000 (prenom nom #2)
+ * Etudiants:  JORA09019100 (Alexandru Jora)
+ *             MUKM28098503 (Mukandila Mukandila)
  */
 
 #include <linux/module.h>
@@ -59,9 +59,12 @@ static struct urb *myUrb[5];
 
 struct usbcam_dev {
 	struct usb_device *usbdev;
+    dev_t dev;
+    struct cdev cdev;
+    struct class *usbcam_class;
 };
 
-struct class * my_class;
+
 
 static struct usb_device_id usbcam_table[] = {
 // { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
@@ -88,7 +91,10 @@ struct file_operations usbcam_fops = {
 	.unlocked_ioctl = usbcam_ioctl,
 };
 
+// driver constants
 #define USBCAM_MINOR 0
+#define DEVICE_NAME "etsele_usbcam"
+
 static struct usb_class_driver usbcam_class = {
 	.name       = "usb/usbcam%d",
 	.fops       = &usbcam_fops,
@@ -96,6 +102,29 @@ static struct usb_class_driver usbcam_class = {
 };
 
 static int __init usbcam_init(void) {
+    int res;
+    printk(KERN_WARNING "===usbcam_init: entering init function\n");
+
+    res = alloc_chrdev_region(usbcam_dev.dev, USBCAM_MINOR, 1, DEVICE_NAME);
+    if(res < 0)
+        printk(KERN_WARNING"===usbcam_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+    else
+        printk(KERN_WARNING"===usbcam_init: MAJOR = %u MINOR = %u\n", MAJOR(usbcam->dev), MINOR(usbcam->dev));
+
+    printk(KERN_WARNING"===usbcam_init: Creating usbcam class\n");
+    usbcam_dev.usbcam_class = class_create(THIS_MODULE, "usbcam_class");
+
+    printk(KERN_WARNING"===usbcam_init: Creating usbcam_node\n");
+    device_create(usbcam_dev.usbcam_class, NULL, usbcam_dev.dev, NULL, "usbcam_node");
+
+    printk(KERN_WARNING"===usbcam_init: cdev INIT\n");
+    cdev_init(usbcam_dev.cdev, &usbcam_fops);
+
+    usbcam_dev.cdev.owner = THIS_MODULE;
+
+    if (cdev_add(usbcam_dev.cdev, usbcam_dev.dev, 1) < 0)
+        printk(KERN_WARNING"===usbcam_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+
     return 0;
 }
 
