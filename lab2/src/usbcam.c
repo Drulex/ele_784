@@ -58,12 +58,12 @@ static unsigned int myLengthUsed;
 static char * myData;
 static struct urb *myUrb[5];
 
-typedef struct {
-	//struct usb_device *usbdev;
+struct usbcam_dev {
+	struct usb_device *usbdev;
     dev_t dev;
     struct cdev cdev;
     struct class *usbcam_class;
-} usbcamDevice;
+};
 
 
 
@@ -101,8 +101,6 @@ static struct usb_class_driver usbcam_class = {
 	.fops       = &usbcam_fops,
 	.minor_base = USBCAM_MINOR,
 };
-
-usbcamDevice * usbcam_dev;
 
 static int __init usbcam_init(void) {
     int res;
