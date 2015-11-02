@@ -28,6 +28,7 @@
 #include <linux/completion.h>
 #include "usbvideo.h"
 #include "dht_data.h"
+#include "usbcam.h"
 
 // Module Information
 MODULE_AUTHOR("prenom nom #1, prenom nom #2");
