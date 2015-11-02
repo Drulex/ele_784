@@ -2,8 +2,8 @@
  * File         : usbcam.c
  * Description  : ELE784 Lab2 source
  *
- * Etudiants:  XXXX00000000 (prenom nom #1)
- *             XXXX00000000 (prenom nom #2)
+ * Etudiants:  JORA09019100 (Alexandru Jora)
+ *             MUKM28098503 (Mukandila Mukandila)
  */
 
 #include <linux/module.h>
@@ -28,6 +28,7 @@
 #include <linux/completion.h>
 #include "usbvideo.h"
 #include "dht_data.h"
+#include "usbcam.h"
 
 // Module Information
 MODULE_AUTHOR("prenom nom #1, prenom nom #2");
