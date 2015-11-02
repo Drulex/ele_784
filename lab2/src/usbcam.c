@@ -59,7 +59,7 @@ static char * myData;
 static struct urb *myUrb[5];
 
 typedef struct {
-	struct usb_device *usbdev;
+	//struct usb_device *usbdev;
     dev_t dev;
     struct cdev cdev;
     struct class *usbcam_class;
@@ -106,58 +106,27 @@ usbcamDevice * usbcam_dev;
 
 static int __init usbcam_init(void) {
     int res;
-    printk(KERN_WARNING "===usbcam_init: entering init function\n");
-
-    usbcam_dev = kmalloc(sizeof(usbcam_dev), GFP_KERNEL);
-    if(!usbcam_dev){
-        printk(KERN_WARNING "===usbcam_init: ERROR in kmalloc (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-        return(-1);
-    }
-
-    res = alloc_chrdev_region(&usbcam_dev->dev, USBCAM_MINOR, 1, DEVICE_NAME);
-    if(res < 0)
-        printk(KERN_WARNING"===usbcam_init: ERROR IN alloc_chrdev_region (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-    else
-        printk(KERN_WARNING"===usbcam_init: MAJOR = %u MINOR = %u\n", MAJOR(usbcam_dev->dev), MINOR(usbcam_dev->dev));
-
-    printk(KERN_WARNING"===usbcam_init: Creating usbcam class\n");
-    usbcam_dev->usbcam_class = class_create(THIS_MODULE, "usbcam_class");
-
-    printk(KERN_WARNING"===usbcam_init: Creating usbcam_node\n");
-    device_create(usbcam_dev->usbcam_class, NULL, usbcam_dev->dev, NULL, "usbcam_node");
-
-    printk(KERN_WARNING"===usbcam_init: cdev INIT\n");
-    cdev_init(&usbcam_dev->cdev, &usbcam_fops);
-
-    usbcam_dev->cdev.owner = THIS_MODULE;
-
-    if (cdev_add(&usbcam_dev->cdev, usbcam_dev->dev, 1) < 0)
-        printk(KERN_WARNING"===usbcam_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-
     printk(KERN_WARNING "===usbcam_init: registering usb device with usbcore\n");
     res = usb_register(&usbcam_driver);
     if(res)
         printk(KERN_WARNING "===usbcam_init: ERROR registering USB device %d\n", res);
+    else
+        printk(KERN_WARNING "===usbcam_init: device registered with return value: %d\n", res);
 
     return 0;
 }
 
 static void __exit usbcam_exit(void) {
-    printk(KERN_WARNING "===usbcam_exit: entering exit function\n");
-    printk(KERN_WARNING"===usbcam_exit: cdev DELETE\n");
-    cdev_del(&usbcam_dev->cdev);
-    printk(KERN_WARNING"===usbcam_exit: usbdev_class DEVICE DELETE\n");
-    device_destroy(usbcam_dev->usbcam_class, usbcam_dev->dev);
-    printk(KERN_WARNING"===usbcam_exit: usbcam_class DELETE\n");
-    class_destroy(usbcam_dev->usbcam_class);
-    printk(KERN_WARNING"===usbcam_exit: usbcam devno DELETE\n");
-    unregister_chrdev_region(usbcam_dev->dev, 1);
     printk(KERN_WARNING "===usbcam_exit: deregistering usb device\n");
     usb_deregister(&usbcam_driver);
-    kfree(usbcam_dev);
 }
 
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
+    const struct usb_host_interface *interface;
+    const struct usb_endpoint_descriptor *endpoint;
+    struct usb_device *dev = interface_to_usbdev(intf);
+    struct usb
+
     return -1;
 }
 
