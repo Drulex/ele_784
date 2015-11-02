@@ -134,6 +134,11 @@ static int __init usbcam_init(void) {
     if (cdev_add(&usbcam_dev->cdev, usbcam_dev->dev, 1) < 0)
         printk(KERN_WARNING"===usbcam_init: ERROR IN cdev_add (%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
 
+    printk(KERN_WARNING "===usbcam_init: registering usb device with usbcore\n")
+;    res = usb_register(&usbcam_driver);
+    if(res)
+        printk(KERN_WARNING "===usbcam_init: ERROR registering USB device %d\n", res);
+
     return 0;
 }
 
@@ -147,6 +152,8 @@ static void __exit usbcam_exit(void) {
     class_destroy(usbcam_dev->usbcam_class);
     printk(KERN_WARNING"===usbcam_exit: usbcam devno DELETE\n");
     unregister_chrdev_region(usbcam_dev->dev, 1);
+    printk(KERN_WARNING "===usbcam_exit: deregistering usb device\n");
+    usb_deregister(&usbcam_driver);
     kfree(usbcam_dev);
 }
 
