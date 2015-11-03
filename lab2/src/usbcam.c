@@ -117,7 +117,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     const struct usb_host_interface *interface;
     const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
-    struct usb
+    struct usbcam_dev *cam_dev = NULL;
+    int n, m, altSetNum, activeInterface = -1;
+
+    cam_dev = kmalloc(sizeof(struct usbcam_dev), GFP_KERNEL);
+    cam_dev->usb_device = usb_get_dev(dev);
 
     return -1;
 }
