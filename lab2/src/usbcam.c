@@ -62,11 +62,12 @@ struct usbcam_dev {
 	struct usb_device *usbdev;
 };
 
-struct class * my_class;
+struct class *my_class;
 
 static struct usb_device_id usbcam_table[] = {
 // { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
 { USB_DEVICE(0x046d, 0x08cc) },
+{ USB_DEVICE(0x046d, 0x0994) },
 {}
 };
 MODULE_DEVICE_TABLE(usb, usbcam_table);
@@ -121,12 +122,37 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     int n, m, altSetNum, activeInterface = -1;
 
     cam_dev = kmalloc(sizeof(struct usbcam_dev), GFP_KERNEL);
-    cam_dev->usb_device = usb_get_dev(dev);
+    cam_dev->usbdev = usb_get_dev(dev);
 
-    return -1;
+    for (n = 0; n < intf->num_altsetting; n++) {
+        interface = &intf->altsetting[n];
+        altSetNum = interface->desc.bAlternateSetting;
+        if(interface->desc.bInterfaceClass == CC_VIDEO){
+            if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING){
+                printk(KERN_WARNING "===usbcam_probe: a miracle just happened\n");
+                activeInterface = altSetNum;
+                break;
+            }
+        }
+    }
+
+    if(activeInterface != -1){
+        usb_set_intfdata (intf, cam_dev);
+        usb_register_dev (intf, &usbcam_class);
+        usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
+        printk(KERN_WARNING "===usbcam_probe: all good\n");
+        return 0;
+    }
+    else{
+        printk(KERN_WARNING "usbcam_probe: could not associate interface to device\n");
+        return -1;
+    }
 }
 
 void usbcam_disconnect(struct usb_interface *intf) {
+    usb_set_intfdata(intf, NULL);
+    usb_deregister_dev(intf, &usbcam_class);
+
 
 }
 
