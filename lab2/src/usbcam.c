@@ -124,12 +124,21 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     cam_dev = kmalloc(sizeof(struct usbcam_dev), GFP_KERNEL);
     cam_dev->usbdev = usb_get_dev(dev);
 
-    for (n = 0; n < intf->num_altsetting; n++) {
+    for (n = 0; n < intf->num_altsetting; n++) { // Cycle through the Interfaces
         interface = &intf->altsetting[n];
         altSetNum = interface->desc.bAlternateSetting;
-        if(interface->desc.bInterfaceClass == CC_VIDEO){
-            if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING){
+        if(interface->desc.bInterfaceClass == CC_VIDEO) {
+            if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
+
+                for(m = 0; m < interface->desc.bNumEndPoints; m++) { // Cycle through the Endpoints
+                    endpoint = &interface->endpoint[m].desc;
+                    printk(KERN_WARNING "===usbcam_probe: endpoint length: %c\n", endpoint->bLength);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %c\n", endpoint->bDescriptorType);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint address: %c\n", endpoint->bEndpointAddress);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %c\n", endpoint->bmAttributes);
+                }
                 printk(KERN_WARNING "===usbcam_probe: a miracle just happened\n");
+
                 activeInterface = altSetNum;
                 break;
             }
