@@ -30,8 +30,11 @@
 #include "dht_data.h"
 #include "usbcam.h"
 
+#define THIS_MODULE 	"usbcam"
+#define KBUILD_MODNAME	"ele784-lab2"
+
 // Module Information
-MODULE_AUTHOR("prenom nom #1, prenom nom #2");
+MODULE_AUTHOR("JORA Alexandru, MUKANDILA Mukandila");
 MODULE_LICENSE("Dual BSD/GPL");
 
 // Prototypes
@@ -115,28 +118,40 @@ static void __exit usbcam_exit(void) {
 }
 
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
+
     const struct usb_host_interface *interface;
     const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
     struct usbcam_dev *cam_dev = NULL;
-    int n, m, altSetNum, activeInterface = -1;
+    int n, m, altSetNum;
+	int activeInterface = -1;
 
+	// Allocate memory to local driver structure
     cam_dev = kmalloc(sizeof(struct usbcam_dev), GFP_KERNEL);
     cam_dev->usbdev = usb_get_dev(dev);
 
     for (n = 0; n < intf->num_altsetting; n++) { // Cycle through the Interfaces
+
         interface = &intf->altsetting[n];
         altSetNum = interface->desc.bAlternateSetting;
+
         if(interface->desc.bInterfaceClass == CC_VIDEO) {
+
             if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
 
-                for(m = 0; m < interface->desc.bNumEndPoints; m++) { // Cycle through the Endpoints
+                for(m = 0; m < interface->desc.bNumEndpoints; m++) { // Cycle through the Endpoints
+
                     endpoint = &interface->endpoint[m].desc;
+
+                    // Basic interface data
                     printk(KERN_WARNING "===usbcam_probe: endpoint length: %c\n", endpoint->bLength);
                     printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %c\n", endpoint->bDescriptorType);
                     printk(KERN_WARNING "===usbcam_probe: endpoint address: %c\n", endpoint->bEndpointAddress);
                     printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %c\n", endpoint->bmAttributes);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %l\n", endpoint->wMaxPacketSize);
+
                 }
+
                 printk(KERN_WARNING "===usbcam_probe: a miracle just happened\n");
 
                 activeInterface = altSetNum;
@@ -166,6 +181,13 @@ void usbcam_disconnect(struct usb_interface *intf) {
 }
 
 int usbcam_open (struct inode *inode, struct file *filp) {
+
+	struct usb_interface *intf;
+	int subminor;
+
+	printk(KERN_WARNING "===usbcam_open: Opening usbcam driver!\n");
+
+	subminor = iminor(inode);
     return 0;
 }
 
