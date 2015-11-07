@@ -24,6 +24,7 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 #include <uapi/asm-generic/ioctl.h>
+#include <uapi/asm-generic/int-ll64.h>
 #include <linux/usb.h>
 #include <linux/completion.h>
 #include "usbvideo.h"
@@ -61,9 +62,20 @@ static unsigned int myLengthUsed;
 static char * myData;
 static struct urb *myUrb[5];
 
-struct usbcam_dev {
+// Structure to keep track of interface and endpoints
+typedef struct {
+	__u8 bInterfaceNumber;
+	__u8 bNumEndpoints;
+
+} USB_Interface_Info;
+
+// General data structure for driver
+typedef struct {
 	struct usb_device *usbdev;
-};
+	struct usb_interface *usbdev_intf;
+	unsigned int numInterfaces;
+	USB_Interface_Info *usb_int_info;
+} usbcam_dev;
 
 struct class *my_class;
 
