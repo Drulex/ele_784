@@ -303,7 +303,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
     // get interface data structure
-    struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
+    USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
