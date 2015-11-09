@@ -302,11 +302,11 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 int urbInit(struct urb *urb, struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
-    struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
-    struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
-
     // get interface data structure
     struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
+
+    struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
+    struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
@@ -316,7 +316,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
     for (i = 0; i < nbUrbs; ++i) {
         usb_free_urb(cam_dev->myUrb[i]);
         cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_KERNEL);
-        if (myUrb[i] == NULL) {
+        if (cam_dev->myUrb[i] == NULL) {
             printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for urb!\n");
             return -ENOMEM;
         }
@@ -325,9 +325,9 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
         // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
         cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(dev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
 
-        if (myUrb[i]->transfer_buffer == NULL) {
+        if (cam_dev->myUrb[i]->transfer_buffer == NULL) {
             printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for transfer buffer!\n");
-            usb_free_urb(myUrb[i]);
+            usb_free_urb(cam_dev->myUrb[i]);
             return -ENOMEM;
         }
 
