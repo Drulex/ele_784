@@ -323,7 +323,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
 
         // NOTE: usb_buffer_alloc renamed to usb_alloc_coherent
         // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
-        cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(dev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
+        cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(cam_dev->usbdev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
 
         if (cam_dev->myUrb[i]->transfer_buffer == NULL) {
             printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for transfer buffer!\n");
@@ -333,9 +333,9 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
 
         // initializing isochronous urb by hand
         printk(KERN_WARNING "===usbcam_urbInit: initializing isochronous urb\n");
-        cam_dev->myUrb[i]->dev = dev;
-        cam_dev->myUrb[i]->context = dev; // *dev* ??
-        cam_dev->myUrb[i]->pipe = usb_rcvisocpipe(dev, endpointDesc.bEndpointAddress);
+        cam_dev->myUrb[i]->dev = cam_dev->usbdev;
+        cam_dev->myUrb[i]->context = cam_dev->usbdev; // *dev* ??
+        cam_dev->myUrb[i]->pipe = usb_rcvisocpipe(cam_dev->usbdev, endpointDesc.bEndpointAddress);
         cam_dev->myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
         cam_dev->myUrb[i]->interval = endpointDesc.bInterval;
         cam_dev->myUrb[i]->complete = urbCompletionCallback;
