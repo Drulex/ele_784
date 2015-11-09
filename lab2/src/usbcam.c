@@ -299,8 +299,6 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-FIXME: REMOVE THIS LINE
-
 int urbInit(struct urb *urb, struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
