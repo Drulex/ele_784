@@ -304,6 +304,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
 
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+
     // get interface data structure
     struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
@@ -316,15 +317,16 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
         usb_free_urb(cam_dev->myUrb[i]);
         cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_KERNEL);
         if (myUrb[i] == NULL) {
-            // TODO: printk(KERN_WARNING "");
+            printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for urb!\n");
             return -ENOMEM;
         }
 
-        // usb_buffer_alloc renamed to usb_alloc_coherent see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
+        // NOTE: usb_buffer_alloc renamed to usb_alloc_coherent
+        // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
         cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(dev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
 
         if (myUrb[i]->transfer_buffer == NULL) {
-            // printk(KERN_WARNING "");
+            printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for transfer buffer!\n");
             usb_free_urb(myUrb[i]);
             return -ENOMEM;
         }
@@ -341,14 +343,14 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
         cam_dev->myUrb[i]->transfer_buffer_length = size;
 
         for (j = 0; j < nbPackets; ++j) {
-            myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
-            myUrb[i]->iso_frame_desc[j].length = myPacketSize;
+            cam_dev->myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
+            cam_dev->myUrb[i]->iso_frame_desc[j].length = myPacketSize;
         }
     }
 
     for(i = 0; i < nbUrbs; i++){
-        // TODO: if ((ret = usb_submit_urb(...)) < 0) {
-            // TODO: printk(KERN_WARNING "");
+        if ((ret = usb_submit_urb(cam_dev->myUrb[i], GFP_KERNEL)) < 0) {
+            printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
             return ret;
         }
     }
