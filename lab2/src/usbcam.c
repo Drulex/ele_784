@@ -238,7 +238,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
                     // Basic interface data
                     printk(KERN_WARNING "===usbcam_probe: endpoint length: %u\n", endpoint->bLength);
-                    printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %x\n", endpoint->bDescriptorType);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %u\n", endpoint->bDescriptorType);
                     printk(KERN_WARNING "===usbcam_probe: endpoint address: %u\n", endpoint->bEndpointAddress);
                     printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %u\n", endpoint->bmAttributes);
                     printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %lu\n", endpoint->wMaxPacketSize);
@@ -313,14 +313,15 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
     nbUrbs = 5;
 
     for (i = 0; i < nbUrbs; ++i) {
-        // TODO: usb_free_urb(...);
-        // TODO: myUrb[i] = usb_alloc_urb(...);
+        usb_free_urb(cam_dev->myUrb[i]);
+        cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_KERNEL);
         if (myUrb[i] == NULL) {
             // TODO: printk(KERN_WARNING "");
             return -ENOMEM;
         }
 
-        // TODO: myUrb[i]->transfer_buffer = usb_buffer_alloc(...);
+        // usb_buffer_alloc renamed to usb_alloc_coherent see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
+        cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(dev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
 
         if (myUrb[i]->transfer_buffer == NULL) {
             // printk(KERN_WARNING "");
@@ -328,6 +329,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
             return -ENOMEM;
         }
 
+        // initializing isochronous urb by hand
         // TODO: myUrb[i]->dev = ...
         // TODO: myUrb[i]->context = *dev*;
         // TODO: myUrb[i]->pipe = usb_rcvisocpipe(*dev*, endpointDesc.bEndpointAddress);
