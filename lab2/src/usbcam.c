@@ -31,8 +31,8 @@
 #include "dht_data.h"
 #include "usbcam.h"
 
-#define THIS_MODULE 	"usbcam"
-#define KBUILD_MODNAME	"ele784-lab2"
+//#define THIS_MODULE 	"usbcam"
+//#define KBUILD_MODNAME	"ele784-lab2"
 
 // Module Information
 MODULE_AUTHOR("JORA Alexandru, MUKANDILA Mukandila");
@@ -62,20 +62,31 @@ static unsigned int myLengthUsed;
 static char * myData;
 static struct urb *myUrb[5];
 
-// Structure to keep track of interface and endpoints
+// Structure to keep track of endpoints
 typedef struct {
-	__u8 bInterfaceNumber;
-	__u8 bNumEndpoints;
+	unsigned int length;
+	unsigned char endpoint_direction; // bitmask comparison
+	unsigned char endpoint_type; // bitmask comparison
+	unsigned int endpoint_max_packet_size;
+	unsigned int endpoint_interval_time;
+} USB_Endpoint_Info;
 
+// Structure to keep track of interfaces
+typedef struct {
+	unsigned int interface_number;
+	unsigned int num_endpoints;
+	unsigned int interface_class;
+	unsigned int interface_subclass;
+	USB_Endpoint_Info *usb_endpoint_info;
 } USB_Interface_Info;
 
 // General data structure for driver
 typedef struct {
 	struct usb_device *usbdev;
-	struct usb_interface *usbdev_intf;
-	unsigned int numInterfaces;
+	unsigned int number_interfaces;
+	int active_interface;
 	USB_Interface_Info *usb_int_info;
-} usbcam_dev;
+} USBCam_Dev;
 
 struct class *my_class;
 
@@ -134,45 +145,114 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     const struct usb_host_interface *interface;
     const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
-    struct usbcam_dev *cam_dev = NULL;
-    int n, m, altSetNum;
-	int activeInterface = -1;
+    USBCam_Dev *cam_dev = NULL;
+    int n, m;//, altSetNum;
+	//int activeInterface = -1;
 
 	// Allocate memory to local driver structure
-    cam_dev = kmalloc(sizeof(struct usbcam_dev), GFP_KERNEL);
+    cam_dev = kmalloc(sizeof(USBCam_Dev), GFP_KERNEL);
+
+    if(!cam_dev)
+    	printk(KERN_WARNING "usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+
     cam_dev->usbdev = usb_get_dev(dev);
+    cam_dev->active_interface = -1;
+
+    /*
+     * 1) find out the amount of interfaces(configurations) available for the usb_device
+     * 2) loop through all the interfaces and store them in our general structure
+     *
+     * struct usb_interface
+     * 		unsigned num_altsetting		- number of alternate settings (interfaces)
+     * 		struct usb_host_interface
+     * 		struct usb_interface_descriptor desc
+     * 			__u8 bNumEndpoints		- accessible as desc.bNumEndpoints
+     * 			__u8 bInterfaceNumber	- accessible as desc.bInterfaceNumber
+     * 			struct usb_host_endpoint endpoint
+     * 				struct usb_endpoint_descriptor desc
+     * 					__u8 bEndpointAddress		- bitmask with USB_DIR_IN or USB_DIR_OUT to find out the type of endpoint
+     * 					__u8 bmAttributes			- bitmask with USB_ENDPOINT_XFERTYPE_MASK to know if of type: USB_ENDPOINT_XFER_ISOC, USB_ENDPOINT_XFER_BULK or USB_ENDPOINT_XFER_INT
+     * 					__le16 wMaxPacketSize		- max size in byes endpoint can handle at once
+     * 					__u8 bInterval				- if of type interrupt (USB_ENDPOINT_XFER_INT) value of time between interrupt requests in milliseconds
+     */
+
+    cam_dev->number_interfaces = intf->num_altsetting;
+    cam_dev->usb_int_info = kmalloc(sizeof(USB_Interface_Info)*cam_dev->number_interfaces, GFP_KERNEL);
+
+    if(!cam_dev->usb_int_info)
+    	printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USB_Interface_Info (%s,%s,%u)",__FILE__, __FUNCTION__, __LINE__);
 
     for (n = 0; n < intf->num_altsetting; n++) { // Cycle through the Interfaces
 
         interface = &intf->altsetting[n];
-        altSetNum = interface->desc.bAlternateSetting;
+        cam_dev->usb_int_info[n].interface_number = interface->desc.bInterfaceNumber;
+        cam_dev->usb_int_info[n].num_endpoints = interface->desc.bNumEndpoints;
+        cam_dev->active_interface = interface->desc.bAlternateSetting;
+
+        //altSetNum = interface->desc.bAlternateSetting;
 
         if(interface->desc.bInterfaceClass == CC_VIDEO) {
 
             if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
 
+            	// Save information about Class and SubClass
+            	cam_dev->usb_int_info[n].interface_class = interface->desc.bInterfaceClass;
+            	cam_dev->usb_int_info[n].interface_subclass = interface->desc.bInterfaceSubClass;
+
+            	// Allocate memory for endpoint information
+            	cam_dev->usb_int_info[n].usb_endpoint_info = kmalloc(sizeof(USB_Endpoint_Info)*cam_dev->usb_int_info[n].num_endpoints, GFP_KERNEL);
+
+            	if(!cam_dev->usb_int_info->usb_endpoint_info)
+            		printk(KERN_WARNING "usbcam_probe: Cannot allocate memory to USB_Endpoint_Info (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+
                 for(m = 0; m < interface->desc.bNumEndpoints; m++) { // Cycle through the Endpoints
 
                     endpoint = &interface->endpoint[m].desc;
 
+                    // Get endpoint direction and save it
+                    if(endpoint->bEndpointAddress & USB_DIR_IN)
+                    	cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_direction = endpoint->bEndpointAddress & USB_DIR_IN;
+                    else
+                    	cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_direction = endpoint->bEndpointAddress & USB_DIR_OUT;
+
+                    // Display endpoint type: ISOCHRONOUS, BULK or INTERRUPT
+                    switch(endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) {
+
+                    	case USB_ENDPOINT_XFER_ISOC:
+                    		printk(KERN_WARNING "===usbcam_probe: endpoint type ISOCHRONOUS\n");
+                    		break;
+                    	case USB_ENDPOINT_XFER_BULK:
+                    		printk(KERN_WARNING "===usbcam_probe: endpoint type BULK\n");
+                    		break;
+                    	case USB_ENDPOINT_XFER_INT:
+                    		printk(KERN_WARNING "===usbcam_probe: endpoint type INTERRUPT\n");
+                    		break;
+                    	default:
+                    		printk(KERN_WARNING "===usbcam_probe: Invalid endpoint type\n");
+                    		break;
+                    } // end switch
+
+                    cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_type = endpoint->bmAttributes;
+                    cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_max_packet_size = endpoint->wMaxPacketSize;
+                    cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_interval_time = endpoint->bLength;
+
                     // Basic interface data
-                    printk(KERN_WARNING "===usbcam_probe: endpoint length: %c\n", endpoint->bLength);
-                    printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %c\n", endpoint->bDescriptorType);
-                    printk(KERN_WARNING "===usbcam_probe: endpoint address: %c\n", endpoint->bEndpointAddress);
-                    printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %c\n", endpoint->bmAttributes);
-                    printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %l\n", endpoint->wMaxPacketSize);
+                    //printk(KERN_WARNING "===usbcam_probe: endpoint length: %c\n", endpoint->bLength);
+                    //printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %c\n", endpoint->bDescriptorType);
+                    //printk(KERN_WARNING "===usbcam_probe: endpoint address: %c\n", endpoint->bEndpointAddress);
+                    //printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %c\n", endpoint->bmAttributes);
+                    //printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %l\n", endpoint->wMaxPacketSize);
 
-                }
+                } //end for loop for endpoints
 
-                printk(KERN_WARNING "===usbcam_probe: a miracle just happened\n");
+                //activeInterface = altSetNum;
+                //break;
+            }// end subclass check if
+        }// end class check if
+    }// end interface for loop.
+    printk(KERN_WARNING "===usbcam_probe: Done detecting Interface(s)\n");
 
-                activeInterface = altSetNum;
-                break;
-            }
-        }
-    }
-
-    if(activeInterface != -1){
+    if(cam_dev->active_interface != -1){
         usb_set_intfdata (intf, cam_dev);
         usb_register_dev (intf, &usbcam_class);
         usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
@@ -194,12 +274,7 @@ void usbcam_disconnect(struct usb_interface *intf) {
 
 int usbcam_open (struct inode *inode, struct file *filp) {
 
-	struct usb_interface *intf;
-	int subminor;
-
 	printk(KERN_WARNING "===usbcam_open: Opening usbcam driver!\n");
-
-	subminor = iminor(inode);
     return 0;
 }
 
