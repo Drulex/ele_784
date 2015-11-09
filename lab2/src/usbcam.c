@@ -330,14 +330,15 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
         }
 
         // initializing isochronous urb by hand
-        // TODO: myUrb[i]->dev = ...
-        // TODO: myUrb[i]->context = *dev*;
-        // TODO: myUrb[i]->pipe = usb_rcvisocpipe(*dev*, endpointDesc.bEndpointAddress);
-        myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
-        myUrb[i]->interval = endpointDesc.bInterval;
-        // TODO: myUrb[i]->complete = ...
-        // TODO: myUrb[i]->number_of_packets = ...
-        // TODO: myUrb[i]->transfer_buffer_length = ...
+        printk(KERN_WARNING "===usbcam_urbInit: initializing isochronous urb\n");
+        cam_dev->myUrb[i]->dev = dev;
+        cam_dev->myUrb[i]->context = dev; // *dev* ??
+        cam_dev->myUrb[i]->pipe = usb_rcvisocpipe(dev, endpointDesc.bEndpointAddress);
+        cam_dev->myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
+        cam_dev->myUrb[i]->interval = endpointDesc.bInterval;
+        cam_dev->myUrb[i]->complete = urbCompletionCallback;
+        cam_dev->myUrb[i]->number_of_packets = nbPackets;
+        cam_dev->myUrb[i]->transfer_buffer_length = size;
 
         for (j = 0; j < nbPackets; ++j) {
             myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
