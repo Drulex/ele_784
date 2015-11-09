@@ -60,7 +60,6 @@ static unsigned int myStatus;
 static unsigned int myLength;
 static unsigned int myLengthUsed;
 static char * myData;
-static struct urb *myUrb[5];
 
 // Structure to keep track of endpoints
 typedef struct {
@@ -82,10 +81,11 @@ typedef struct {
 
 // General data structure for driver
 typedef struct {
-	struct usb_device *usbdev;
-	unsigned int number_interfaces;
-	int active_interface;
-	USB_Interface_Info *usb_int_info;
+    struct usb_device *usbdev;
+    unsigned int number_interfaces;
+    int active_interface;
+    USB_Interface_Info *usb_int_info;
+    struct urb *myUrb[5];
 } USBCam_Dev;
 
 struct class *my_class;
@@ -299,10 +299,11 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-/* FIXME: REMOVE THIS LINE
+FIXME: REMOVE THIS LINE
 
 int urbInit(struct urb *urb, struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
+
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
 
@@ -411,5 +412,3 @@ static void urbCompletionCallback(struct urb *urb) {
         // TODO: printk(KERN_WARNING "");
     }
 }
-
-FIXME: REMOVE THIS LINE*/
