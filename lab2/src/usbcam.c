@@ -237,11 +237,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
                     cam_dev->usb_int_info[n].usb_endpoint_info[m].endpoint_interval_time = endpoint->bLength;
 
                     // Basic interface data
-                    //printk(KERN_WARNING "===usbcam_probe: endpoint length: %c\n", endpoint->bLength);
-                    //printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %c\n", endpoint->bDescriptorType);
-                    //printk(KERN_WARNING "===usbcam_probe: endpoint address: %c\n", endpoint->bEndpointAddress);
-                    //printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %c\n", endpoint->bmAttributes);
-                    //printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %l\n", endpoint->wMaxPacketSize);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint length: %u\n", endpoint->bLength);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint descriptor type: %x\n", endpoint->bDescriptorType);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint address: %u\n", endpoint->bEndpointAddress);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint attributes: %u\n", endpoint->bmAttributes);
+                    printk(KERN_WARNING "===usbcam_probe: endpoint max packet size: %lu\n", endpoint->wMaxPacketSize);
 
                 } //end for loop for endpoints
 
