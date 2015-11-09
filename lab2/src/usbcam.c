@@ -306,6 +306,8 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
 
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+    // get interface data structure
+    struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
