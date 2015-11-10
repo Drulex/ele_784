@@ -57,7 +57,7 @@ static void urbCompletionCallback(struct urb *urb);
 
 
 static unsigned int myStatus;
-static unsigned int myLength;
+static unsigned int myLength = 42666;
 static unsigned int myLengthUsed;
 static char * myData;
 
@@ -89,6 +89,7 @@ typedef struct {
 } USBCam_Dev;
 
 struct class *my_class;
+USBCam_Dev *cam_dev;
 
 static struct usb_device_id usbcam_table[] = {
 // { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
@@ -145,7 +146,6 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     const struct usb_host_interface *interface;
     const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
-    USBCam_Dev *cam_dev = NULL;
     int n, m;//, altSetNum;
 	//int activeInterface = -1;
 
@@ -193,6 +193,9 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
         if(interface->desc.bInterfaceClass == CC_VIDEO) {
 
+            if(interface->desc.bInterfaceSubClass == SC_VIDEOCONTROL)
+                return 0;
+
             if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
 
             	// Save information about Class and SubClass
@@ -203,7 +206,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
             	cam_dev->usb_int_info[n].usb_endpoint_info = kmalloc(sizeof(USB_Endpoint_Info)*cam_dev->usb_int_info[n].num_endpoints, GFP_KERNEL);
 
             	if(!cam_dev->usb_int_info->usb_endpoint_info)
-            		printk(KERN_WARNING "usbcam_probe: Cannot allocate memory to USB_Endpoint_Info (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            		printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USB_Endpoint_Info (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
                 for(m = 0; m < interface->desc.bNumEndpoints; m++) { // Cycle through the Endpoints
 
@@ -247,8 +250,12 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
                 //activeInterface = altSetNum;
                 //break;
-            }// end subclass check if
-        }// end class check if
+            }
+            else
+                return -1;// end subclass check if
+        }
+        else
+            return -1;// end class check if
     }// end interface for loop.
     printk(KERN_WARNING "===usbcam_probe: Done detecting Interface(s)\n");
 
@@ -260,7 +267,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         return 0;
     }
     else{
-        printk(KERN_WARNING "usbcam_probe: could not associate interface to device\n");
+        printk(KERN_WARNING "===usbcam_probe: could not associate interface to device\n");
         return -1;
     }
 }
@@ -302,8 +309,8 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 int urbInit(struct urb *urb, struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
-    // get interface data structure
-    USBCam_Dev *cam_dev = usb_get_intfdata(intf);
+    myStatus = 0;
+    myLengthUsed = 0;
 
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
@@ -334,7 +341,7 @@ int urbInit(struct urb *urb, struct usb_interface *intf) {
         // initializing isochronous urb by hand
         printk(KERN_WARNING "===usbcam_urbInit: initializing isochronous urb\n");
         cam_dev->myUrb[i]->dev = cam_dev->usbdev;
-        cam_dev->myUrb[i]->context = cam_dev->usbdev; // *dev* ??
+        cam_dev->myUrb[i]->context = cam_dev->usbdev; // *dev* ?? // check struct void*?
         cam_dev->myUrb[i]->pipe = usb_rcvisocpipe(cam_dev->usbdev, endpointDesc.bEndpointAddress);
         cam_dev->myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
         cam_dev->myUrb[i]->interval = endpointDesc.bInterval;
@@ -405,15 +412,18 @@ static void urbCompletionCallback(struct urb *urb) {
 
         if (!(myStatus == 1)){
             if ((ret = usb_submit_urb(urb, GFP_ATOMIC)) < 0) {
-                // TODO: printk(KERN_WARNING "");
+                printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR submitting URB: %i\n", ret);
             }
-        } else {
+        }
+        else {
+            // handle simultaneous ioctl_grab and read
             ///////////////////////////////////////////////////////////////////////
             //  Synchronisation
             ///////////////////////////////////////////////////////////////////////
             //TODO
         }
-    } else {
-        // TODO: printk(KERN_WARNING "");
+    }
+    else {
+        printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR completing urb: %i\n", urb->status);
     }
 }
