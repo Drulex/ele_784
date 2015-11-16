@@ -328,6 +328,7 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     char cam_pos[4];
     printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
+    char data[2];
 
     //NOTE let's not forget to add access protection in this function!
 
@@ -345,8 +346,26 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     */
 
     switch(cmd) {
+
         case IOCTL_GET:
-            break;
+            if(arg == GET_CUR || arg == GET_MIN || arg == GET_MAX || arg == GET_RES){
+                usb_control_msg(cam_dev->usbdev,
+                                usb_rcvctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
+                                arg,
+                                (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                                0,
+                                0x0200,
+                                //&data,
+                                NULL, // use this for now.
+                                2,
+                                0);
+                break;
+            }
+            else{
+                printk(KERN_WARNING "===usbcam_ioctl_get: ERROR arg is invalid! %s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+                return -EFAULT;
+            }
+
 
         case IOCTL_SET:
             break;
