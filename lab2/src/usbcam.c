@@ -290,7 +290,34 @@ int usbcam_release (struct inode *inode, struct file *filp) {
 }
 
 ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
-    return 0;
+    int i;
+    int bytes_copied = 0;
+
+    // wait for callback to be done; don't know how to do that yet. Apparently we have to use completion interface??
+
+    // perhaps perform some access protection as well?
+
+    // copy data to user space
+    bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
+
+    // in case something went wrong
+    if(bytes_copied <= 0){
+        printk(KERN_WARNING "===usbcam_read: error while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+        return -EFAULT;
+    }
+
+    // destroy all URB
+    for(i=0; i<5; i++){
+        usb_kill_urb(cam_dev->myUrb[i]);
+
+        // free urb buffer, really unsure about this..
+        usb_free_coherent(cam_dev->usbdev, cam_dev->myUrb[i]->transfer_buffer_length, cam_dev->myUrb[i]->transfer_buffer, cam_dev->myUrb[i]->transfer_dma);
+
+        // free urb struct
+        usb_free_urb(&cam_dev->myUrb[i]);
+    }
+
+    return bytes_copied;
 }
 
 ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
