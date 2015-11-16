@@ -368,6 +368,15 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
 
         case IOCTL_SET:
+            usb_control_msg(cam_dev->usbdev,
+                            usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
+                            0x01,
+                            (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                            0,
+                            0x0200,
+                            arg,
+                            2,
+                            0);
             break;
 
         case IOCTL_STREAMON:
