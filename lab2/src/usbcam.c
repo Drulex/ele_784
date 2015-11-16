@@ -325,6 +325,33 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 }
 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
+    printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
+
+    switch(cmd) {
+        case IOCTL_GET:
+            break;
+
+        case IOCTL_SET:
+            break;
+
+        case IOCTL_STREAMON:
+            break;
+
+        case IOCTL_STREAMOFF:
+            break;
+
+        case IOCTL_GRAB:
+            break;
+
+        case IOCTL_PANTILT:
+            break;
+
+        case IOCTL_PANTILT_RESET:
+            break;
+
+        default:
+            return -EINVAL;
+    }
     return 0;
 }
 
