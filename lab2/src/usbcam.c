@@ -328,6 +328,21 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
 
+    //NOTE let's not forget to add access protection in this function!
+
+    // prototype of usb_control_msg
+    /*
+    int usb_control_msg (struct usb_device * dev,
+    unsigned int pipe,
+    __u8 request,
+    __u8 requesttype,
+    __u16 value,
+    __u16 index,
+    void * data,
+    __u16 size,
+    int timeout);
+    */
+
     switch(cmd) {
         case IOCTL_GET:
             break;
@@ -336,6 +351,15 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_STREAMON:
+            usb_control_msg(cam_dev->usbdev,
+                            usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
+                            0x0B,
+                            (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
+                            0x0004,
+                            0x0001,
+                            NULL,
+                            0,
+                            0);
             break;
 
         case IOCTL_STREAMOFF:
