@@ -326,6 +326,7 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 }
 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
+    char cam_pos[4];
     printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
 
     //NOTE let's not forget to add access protection in this function!
@@ -378,6 +379,50 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_PANTILT:
+            // fill cam_pos array based on user provided position
+            switch(arg){
+                // UP
+                case 0:
+                    cam_pos[0] = 0x00;
+                    cam_pos[1] = 0x00;
+                    cam_pos[2] = 0x80;
+                    cam_pos[3] = 0xFF;
+                    break;
+
+                // DOWN
+                case 1:
+                    cam_pos[0] = 0x00;
+                    cam_pos[1] = 0x00;
+                    cam_pos[2] = 0x80;
+                    cam_pos[3] = 0x00;
+                    break;
+
+                // LEFT
+                case 2:
+                    cam_pos[0] = 0x80;
+                    cam_pos[1] = 0x00;
+                    cam_pos[2] = 0x00;
+                    cam_pos[3] = 0x00;
+                    break;
+
+                // RIGHT
+                case 3:
+                    cam_pos[0] = 0x80;
+                    cam_pos[1] = 0xFF;
+                    cam_pos[2] = 0x00;
+                    cam_pos[3] = 0x00;
+                    break;
+            }
+            //send actual usb_control_msgs
+            usb_control_msg(cam_dev->usbdev,
+                            usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
+                            0x01,
+                            (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                            0x0100,
+                            0x0900,
+                            &cam_pos,
+                            4,
+                            0);
             break;
 
         case IOCTL_PANTILT_RESET:
