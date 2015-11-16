@@ -426,6 +426,15 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_PANTILT_RESET:
+            usb_control_msg(cam_dev->usbdev,
+                            usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
+                            0x01,
+                            (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
+                            0x0200,
+                            0x0900,
+                            0x03,
+                            1,
+                            0);
             break;
 
         default:
