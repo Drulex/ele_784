@@ -262,7 +262,8 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     if(cam_dev->active_interface != -1){
         usb_set_intfdata (intf, cam_dev);
         usb_register_dev (intf, &usbcam_class);
-        usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
+        //usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
+        usb_set_interface (dev, 1, 4);
         printk(KERN_WARNING "===usbcam_probe: all good\n");
         return 0;
     }
