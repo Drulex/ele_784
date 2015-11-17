@@ -417,7 +417,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_GRAB:
-            urbInit()
+            urbInit(&intf);
             break;
 
         case IOCTL_PANTILT:
