@@ -52,7 +52,7 @@ module_init(usbcam_init);
 module_exit(usbcam_exit);
 
 // Private function prototypes
-static int urbInit(struct urb *urb, struct usb_interface *intf);
+static int urbInit(struct usb_interface *intf);
 static void urbCompletionCallback(struct urb *urb);
 
 
@@ -417,6 +417,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_GRAB:
+            urbInit()
             break;
 
         case IOCTL_PANTILT:
@@ -495,7 +496,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-int urbInit(struct urb *urb, struct usb_interface *intf) {
+int urbInit(struct usb_interface *intf) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
     myStatus = 0;
