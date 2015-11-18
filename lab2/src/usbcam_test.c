@@ -49,6 +49,8 @@ int main(void) {
 
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
+		
+		mySize = sizeof()
 
 		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
 		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
