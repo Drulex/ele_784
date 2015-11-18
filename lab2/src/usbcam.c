@@ -85,6 +85,7 @@ typedef struct {
     unsigned int number_interfaces;
     int active_interface;
     USB_Interface_Info *usb_int_info;
+    struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
 } USBCam_Dev;
 
@@ -146,7 +147,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     const struct usb_host_interface *interface;
     const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
-    int n, m;//, altSetNum;
+    int n, m, retnum;//, altSetNum;
 	//int activeInterface = -1;
 
 	// Allocate memory to local driver structure
@@ -157,25 +158,6 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
     cam_dev->usbdev = usb_get_dev(dev);
     cam_dev->active_interface = -1;
-
-    /*
-     * 1) find out the amount of interfaces(configurations) available for the usb_device
-     * 2) loop through all the interfaces and store them in our general structure
-     *
-     * struct usb_interface
-     * 		unsigned num_altsetting		- number of alternate settings (interfaces)
-     * 		struct usb_host_interface
-     * 		struct usb_interface_descriptor desc
-     * 			__u8 bNumEndpoints		- accessible as desc.bNumEndpoints
-     * 			__u8 bInterfaceNumber	- accessible as desc.bInterfaceNumber
-     * 			struct usb_host_endpoint endpoint
-     * 				struct usb_endpoint_descriptor desc
-     * 					__u8 bEndpointAddress		- bitmask with USB_DIR_IN or USB_DIR_OUT to find out the type of endpoint
-     * 					__u8 bmAttributes			- bitmask with USB_ENDPOINT_XFERTYPE_MASK to know if of type: USB_ENDPOINT_XFER_ISOC, USB_ENDPOINT_XFER_BULK or USB_ENDPOINT_XFER_INT
-     * 					__le16 wMaxPacketSize		- max size in byes endpoint can handle at once
-     * 					__u8 bInterval				- if of type interrupt (USB_ENDPOINT_XFER_INT) value of time between interrupt requests in milliseconds
-     */
-
     cam_dev->number_interfaces = intf->num_altsetting;
     cam_dev->usb_int_info = kmalloc(sizeof(USB_Interface_Info)*cam_dev->number_interfaces, GFP_KERNEL);
 
@@ -198,6 +180,8 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
             if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
 
+                printk(KERN_WARNING "===usbcam_probe: Active interface number: %d\n", cam_dev->usb_int_info[n].interface_number);
+                cam_dev->usbcam_interface = interface;
             	// Save information about Class and SubClass
             	cam_dev->usb_int_info[n].interface_class = interface->desc.bInterfaceClass;
             	cam_dev->usb_int_info[n].interface_subclass = interface->desc.bInterfaceSubClass;
@@ -205,7 +189,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
             	// Allocate memory for endpoint information
             	cam_dev->usb_int_info[n].usb_endpoint_info = kmalloc(sizeof(USB_Endpoint_Info)*cam_dev->usb_int_info[n].num_endpoints, GFP_KERNEL);
 
-            	if(!cam_dev->usb_int_info->usb_endpoint_info)
+            	if(!cam_dev->usb_int_info[n].usb_endpoint_info)
             		printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USB_Endpoint_Info (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
                 for(m = 0; m < interface->desc.bNumEndpoints; m++) { // Cycle through the Endpoints
@@ -261,7 +245,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
     if(cam_dev->active_interface != -1){
         usb_set_intfdata (intf, cam_dev);
-        usb_register_dev (intf, &usbcam_class);
+        retnum = usb_register_dev (intf, &usbcam_class);
+        if(retnum < 0)
+            printk(KERN_WARNING "===usbcam_probe: Error registering driver with USBCORE\n");
+        else
+            printk(KERN_WARNING "===usbcam_probe: Registered driver with USBCORE\n");
         //usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
         usb_set_interface (dev, 1, 4);
         printk(KERN_WARNING "===usbcam_probe: all good\n");
@@ -330,6 +318,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
     char data[2];
     int retcode;
+    struct usb_interface *intf;
 
     //NOTE let's not forget to add access protection in this function!
 
@@ -417,7 +406,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_GRAB:
-            urbInit(&intf);
+            urbInit(&cam_dev->usbcam_interface);
             break;
 
         case IOCTL_PANTILT:
