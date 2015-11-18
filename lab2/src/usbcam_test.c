@@ -25,8 +25,9 @@
 8) Fermer le fichier ouvert à l’étape #1
  */
 
-#define USBCAM_IMAGE 	"/tmp/usbcam_image.jpg"
-#define USBCAM_DEVICE 	"/dev/usbcam1"
+#define USBCAM_IMAGE 		"/tmp/usbcam_image.jpg"
+#define USBCAM_DEVICE 		"/dev/usbcam1"
+#define USBCAM_BUF_SIZE		42666
 
 int main(void) {
 
@@ -36,8 +37,8 @@ int main(void) {
 	unsigned char * finalBuffer;
 	unsigned int mySize;
 
-	inBuffer = malloc((42666) * sizeof(unsigned char));
-	finalBuffer = malloc((42666 * 2) * sizeof(unsigned char));
+	inBuffer = malloc((USBCAM_BUF_SIZE) * sizeof(unsigned char));
+	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
 
 	if((!inBuffer) || (!finalBuffer)) {
 		print("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
@@ -49,15 +50,20 @@ int main(void) {
 
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
-		
-		mySize = sizeof()
 
+		ioctl(fd, IOCTL_STREAMON); // #2
+		ioctl(fd, IOCTL_GRAB); // #3
+		mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+		ioctl(fd, IOCTL_STREAMOFF); // #5
+
+		// #6
 		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
 		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
 		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
 		
-		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput);
-		fclose(foutput);
+		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
+		fclose(foutput); // #8
+
 	}
 
 	free(finalBuffer);
