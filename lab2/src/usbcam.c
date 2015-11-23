@@ -136,13 +136,6 @@ static int __init usbcam_init(void) {
     else
         printk(KERN_WARNING "===usbcam_init: device registered with return value: %d\n", res);
 
-    printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
-    sema_init(&cam_dev->SemURB, 1);
-
-    printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
-    cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
-
-
     return 0;
 }
 
@@ -262,6 +255,13 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         //usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
         usb_set_interface (dev, 1, 4);
         printk(KERN_WARNING "===usbcam_probe: all good\n");
+
+        printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
+        sema_init(&cam_dev->SemURB, 1);
+
+        printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
+        cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
+
         return 0;
     }
     else{
@@ -288,7 +288,7 @@ int usbcam_open (struct inode *inode, struct file *filp) {
             return -ENOTTY;
         break;
     }
-	
+
     return 0;
 }
 
@@ -631,14 +631,14 @@ static void urbCompletionCallback(struct urb *urb) {
             // Syncronisation for IOCTL_GRAB and READ
             if(down_interruptible(&cam_dev->SemURB)) {
                 printk(KERN_WARNING "===usbcam_urbCompletionCallback: Unable to lock URB semaphore (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
-            } else {
-                
+            }
+            else {
+
                 urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
                 // Wait while status is not completed
                 while(urbCounterTotal < 5);
                 // Unlock semaphore
                 up(&cam_dev->SemURB);
-
             }
         }
     }
