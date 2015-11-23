@@ -88,6 +88,7 @@ typedef struct {
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
     struct semaphore SemURB;
+    atomic_t urbCounter;
 } USBCam_Dev;
 
 struct class *my_class;
@@ -136,7 +137,11 @@ static int __init usbcam_init(void) {
         printk(KERN_WARNING "===usbcam_init: device registered with return value: %d\n", res);
 
     printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
-    sema_init(&cam_dev->SemURB);
+    sema_init(&cam_dev->SemURB, 1);
+
+    printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
+    cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
+
 
     return 0;
 }
@@ -158,7 +163,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     cam_dev = kmalloc(sizeof(USBCam_Dev), GFP_KERNEL);
 
     if(!cam_dev)
-    	printk(KERN_WARNING "usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    	printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     cam_dev->usbdev = usb_get_dev(dev);
     cam_dev->active_interface = -1;
@@ -558,10 +563,13 @@ int urbInit(struct usb_interface *intf) {
         }
     }
 
+    atomic_set(&cam_dev->urbCounter, 0); // Reset counter to 0
     for(i = 0; i < nbUrbs; i++){
         if ((ret = usb_submit_urb(cam_dev->myUrb[i], GFP_KERNEL)) < 0) {
             printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
             return ret;
+        } else {
+            atomic_inc(&cam_dev->urbCounter); // increment counter +1
         }
     }
     return 0;
@@ -569,7 +577,7 @@ int urbInit(struct usb_interface *intf) {
 
 
 static void urbCompletionCallback(struct urb *urb) {
-    int ret;
+    int ret, urbCounterTotal;
     int i;
     unsigned char * data;
     unsigned int len;
@@ -620,21 +628,18 @@ static void urbCompletionCallback(struct urb *urb) {
         }
         else {
 
+            // Syncronisation for IOCTL_GRAB and READ
             if(down_interruptible(&cam_dev->SemURB)) {
                 printk(KERN_WARNING "===usbcam_urbCompletionCallback: Unable to lock URB semaphore (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
             } else {
-
+                
+                urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
                 // Wait while status is not completed
-                while(urb->complete->status < 0);
+                while(urbCounterTotal < 5);
                 // Unlock semaphore
                 up(&cam_dev->SemURB);
 
             }
-            // handle simultaneous ioctl_grab and read
-            ///////////////////////////////////////////////////////////////////////
-            //  Synchronisation
-            ///////////////////////////////////////////////////////////////////////
-            //TODO
         }
     }
     else {
