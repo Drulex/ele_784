@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include "usbcam.h"
 #include "dht_data.h"
 
@@ -30,13 +31,24 @@
 #define USBCAM_DEVICE 		"/dev/usbcam1"
 #define USBCAM_BUF_SIZE		42666
 
-int main(void) {
+int main(int argc, char *argv[]) {
+	if(!argv[1] || !argv[2]){
+		printf("ERROR: Unable to parse arguments!. Please provide arguments as shown below:\n");
+		printf("./usbcam_test 'direction' 'value'\n");
+		printf("Example: ./usbcam_test down 10\n");
+		printf("To call reset provide value of 0\n");
+		printf("Example: ./usbcam_test reset 0\n");
+		printf("Now exiting\n");
+		return -1;
+	}
 
 	FILE *foutput;
 	static int fd;
 	unsigned char * inBuffer;
 	unsigned char * finalBuffer;
 	unsigned int mySize;
+	int i = 0;
+	int max = atoi(argv[2]);
 
 	inBuffer = malloc((USBCAM_BUF_SIZE) * sizeof(unsigned char));
 	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
@@ -52,39 +64,74 @@ int main(void) {
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
 
-		ioctl(fd, IOCTL_PANTILT, 0);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT_RESET);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT, 1);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT_RESET);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT, 2);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT_RESET);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT, 3);
-		sleep(2);
-		ioctl(fd, IOCTL_PANTILT_RESET);
+		if(!strcmp(argv[1], "up")){
+			printf("PANTILT: DIR=UP, VALUE=%i\n", max);
+			for(i=0; i<max; i++){
+					ioctl(fd, IOCTL_PANTILT, 0);
+			}
+			sleep(1);
+		}
 
-		//ioctl(fd, IOCTL_STREAMON); // #2
-		//ioctl(fd, IOCTL_GRAB); // #3
-		//mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
-		//ioctl(fd, IOCTL_STREAMOFF); // #5
+		else if(!strcmp(argv[1], "down")){
+			printf("PANTILT: DIR=DOWN, VALUE=%i\n", max);
+			for(i=0; i<max; i++){
+					ioctl(fd, IOCTL_PANTILT, 1);
+			}
+			sleep(1);
+		}
+
+		else if(!strcmp(argv[1], "left")){
+			printf("PANTILT: DIR=LEFT, VALUE=%i\n", max);
+			for(i=0; i<max; i++){
+					ioctl(fd, IOCTL_PANTILT, 2);
+			}
+			sleep(1);
+		}
+
+		else if(!strcmp(argv[1], "right")){
+			printf("PANTILT: DIR=RIGHT, VALUE=%i\n", max);
+			for(i=0; i<max; i++){
+					ioctl(fd, IOCTL_PANTILT, 3);
+			}
+			sleep(1);
+		}
+
+		else if(!strcmp(argv[1], "reset")){
+			printf("PANTILT_RESET\n");
+			ioctl(fd, IOCTL_PANTILT_RESET);
+			sleep(1);
+		}
+
+		else{
+			printf("Command not recognized\n");
+			printf("Exiting\n");
+			close(fd);
+			free(finalBuffer);
+			free(inBuffer);
+			return -1;
+		}
+
+		/*
+		ioctl(fd, IOCTL_STREAMON); // #2
+		ioctl(fd, IOCTL_GRAB); // #3
+		mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+		ioctl(fd, IOCTL_STREAMOFF); // #5
 
 		// #6
-		//memcpy(finalBuffer, inBuffer, HEADERFRAME1);
-		//memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
-		//memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
-		
-		//fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
-		//fclose(foutput); // #8
+		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
+		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
+		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
 
+		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
+		fclose(foutput); // #8
+
+		*/
 	}
 
 	close(fd);
 	free(finalBuffer);
 	free(inBuffer);
+
+	return 0;
 
 }
