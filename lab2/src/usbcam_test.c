@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include "usbcam.h"
 #include "dht_data.h"
@@ -41,7 +42,7 @@ int main(void) {
 	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
 
 	if((!inBuffer) || (!finalBuffer)) {
-		print("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
+		printf("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
 		return -1;
 	}
 
@@ -51,21 +52,38 @@ int main(void) {
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
 
-		ioctl(fd, IOCTL_STREAMON); // #2
-		ioctl(fd, IOCTL_GRAB); // #3
-		mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
-		ioctl(fd, IOCTL_STREAMOFF); // #5
+		ioctl(fd, IOCTL_PANTILT, 0);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT_RESET);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT, 1);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT_RESET);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT, 2);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT_RESET);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT, 3);
+		sleep(2);
+		ioctl(fd, IOCTL_PANTILT_RESET);
+
+		//ioctl(fd, IOCTL_STREAMON); // #2
+		//ioctl(fd, IOCTL_GRAB); // #3
+		//mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+		//ioctl(fd, IOCTL_STREAMOFF); // #5
 
 		// #6
-		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
-		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
-		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
+		//memcpy(finalBuffer, inBuffer, HEADERFRAME1);
+		//memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
+		//memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
 		
-		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
-		fclose(foutput); // #8
+		//fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
+		//fclose(foutput); // #8
 
 	}
 
+	close(fd);
 	free(finalBuffer);
 	free(inBuffer);
 

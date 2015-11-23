@@ -270,11 +270,30 @@ void usbcam_disconnect(struct usb_interface *intf) {
 
 int usbcam_open (struct inode *inode, struct file *filp) {
 
-	printk(KERN_WARNING "===usbcam_open: Opening usbcam driver!\n");
+    switch(filp->f_flags & O_ACCMODE){
+        case O_RDONLY:
+            printk(KERN_WARNING "===usbcam_open: Opening usbcam driver in READONLY MODE!\n");
+        break;
+        default:
+            printk(KERN_WARNING "===usbcam_open: UNKNOWN READ MODE!\n");
+            return -ENOTTY;
+        break;
+    }
+	
     return 0;
 }
 
 int usbcam_release (struct inode *inode, struct file *filp) {
+
+    switch(filp->f_flags & O_ACCMODE){
+        case O_RDONLY:
+            printk(KERN_WARNING "===usbcam_release: Releasing usbcam driver in from READONLY MODE!\n");
+        break;
+        default:
+            printk(KERN_WARNING "===usbcam_release: UNKNOWN RELEASE MODE!\n");
+            return -ENOTTY;
+        break;
+    }
     return 0;
 }
 
@@ -318,6 +337,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
     char data[2];
     int retcode;
+    int pantilt = 0x03;
     struct usb_interface *intf;
 
     //NOTE let's not forget to add access protection in this function!
@@ -349,7 +369,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                                 NULL, // use this for now.
                                 2,
                                 0);
-                if(retcode){
+                if(retcode < 0){
                     printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_GET! code %i\n", retcode);
                 }
                 break;
@@ -370,7 +390,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             arg,
                             2,
                             0);
-            if(retcode){
+            if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_SET! code %i\n", retcode);
                 }
             break;
@@ -385,7 +405,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             NULL,
                             0,
                             0);
-            if(retcode){
+            if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
             }
             break;
@@ -400,7 +420,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             NULL,
                             0,
                             0);
-            if(retcode){
+            if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", retcode);
             }
             break;
@@ -454,7 +474,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             &cam_pos,
                             4,
                             0);
-            if(retcode){
+            if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT! code %i\n", retcode);
             }
             break;
@@ -466,10 +486,10 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                             0x0200,
                             0x0900,
-                            0x03,
+                            &pantilt,//0x03,
                             1,
                             0);
-            if(retcode){
+            if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", retcode);
             }
             break;

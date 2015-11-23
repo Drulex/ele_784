@@ -13,5 +13,5 @@ all:
 
 # It's always a good thing to offer a way to cleanup our development directory
 clean:
-	-rm -f *.o *.ko .*.cmd .*.flags *.mod.c Module.symvers modules.order
+	-rm -f *.o *.ko .*.cmd .*.flags *.mod.c Module.symvers modules.order usbcam_test
 	-rm -rf .tmp_versions
