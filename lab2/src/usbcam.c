@@ -87,6 +87,7 @@ typedef struct {
     USB_Interface_Info *usb_int_info;
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
+    struct semaphore SemURB;
 } USBCam_Dev;
 
 struct class *my_class;
@@ -133,6 +134,9 @@ static int __init usbcam_init(void) {
         printk(KERN_WARNING "===usbcam_init: ERROR registering USB device %d\n", res);
     else
         printk(KERN_WARNING "===usbcam_init: device registered with return value: %d\n", res);
+
+    printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
+    sema_init(&cam_dev->SemURB);
 
     return 0;
 }
@@ -615,6 +619,17 @@ static void urbCompletionCallback(struct urb *urb) {
             }
         }
         else {
+
+            if(down_interruptible(&cam_dev->SemURB)) {
+                printk(KERN_WARNING "===usbcam_urbCompletionCallback: Unable to lock URB semaphore (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
+            } else {
+
+                // Wait while status is not completed
+                while(urb->complete->status < 0);
+                // Unlock semaphore
+                up(&cam_dev->SemURB);
+
+            }
             // handle simultaneous ioctl_grab and read
             ///////////////////////////////////////////////////////////////////////
             //  Synchronisation
