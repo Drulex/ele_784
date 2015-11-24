@@ -437,6 +437,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_GRAB:
+            printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_GRAB\n");
             urbInit(&cam_dev->usbcam_interface);
             break;
 
@@ -523,14 +524,17 @@ int urbInit(struct usb_interface *intf) {
 
     myStatus = 0;
     myLengthUsed = 0;
-
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
     size = myPacketSize * nbPackets;
     nbUrbs = 5;
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     for (i = 0; i < nbUrbs; ++i) {
         usb_free_urb(cam_dev->myUrb[i]);
@@ -542,15 +546,19 @@ int urbInit(struct usb_interface *intf) {
 
         // NOTE: usb_buffer_alloc renamed to usb_alloc_coherent
         // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(cam_dev->usbdev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
         if (cam_dev->myUrb[i]->transfer_buffer == NULL) {
+            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             printk(KERN_WARNING "usbcam_urbInit: ERROR allocating memory for transfer buffer!\n");
             usb_free_urb(cam_dev->myUrb[i]);
             return -ENOMEM;
         }
 
         // initializing isochronous urb by hand
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         printk(KERN_WARNING "===usbcam_urbInit: initializing isochronous urb\n");
         cam_dev->myUrb[i]->dev = cam_dev->usbdev;
         cam_dev->myUrb[i]->context = cam_dev->usbdev; // *dev* ?? // check struct void*?
@@ -560,6 +568,7 @@ int urbInit(struct usb_interface *intf) {
         cam_dev->myUrb[i]->complete = urbCompletionCallback;
         cam_dev->myUrb[i]->number_of_packets = nbPackets;
         cam_dev->myUrb[i]->transfer_buffer_length = size;
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
         for (j = 0; j < nbPackets; ++j) {
             cam_dev->myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
@@ -568,10 +577,13 @@ int urbInit(struct usb_interface *intf) {
     }
 
     for(i = 0; i < nbUrbs; i++){
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         if ((ret = usb_submit_urb(cam_dev->myUrb[i], GFP_KERNEL)) < 0) {
+            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
             return ret;
         }
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     }
     return 0;
 }
