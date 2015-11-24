@@ -183,7 +183,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
             if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
 
                 printk(KERN_WARNING "===usbcam_probe: Active interface number: %d\n", cam_dev->usb_int_info[n].interface_number);
-                cam_dev->usbcam_interface = interface;
+                cam_dev->usbcam_interface = intf;
             	// Save information about Class and SubClass
             	cam_dev->usb_int_info[n].interface_class = interface->desc.bInterfaceClass;
             	cam_dev->usb_int_info[n].interface_subclass = interface->desc.bInterfaceSubClass;
@@ -378,6 +378,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                                 0);
                 if(retcode < 0){
                     printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_GET! code %i\n", retcode);
+                    return retcode;
                 }
                 break;
             }
@@ -399,6 +400,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0);
             if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_SET! code %i\n", retcode);
+                return retcode;
                 }
             break;
 
@@ -414,6 +416,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0);
             if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
+                return retcode;
             }
             break;
 
@@ -429,6 +432,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0);
             if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", retcode);
+                return retcode;
             }
             break;
 
@@ -483,6 +487,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0);
             if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT! code %i\n", retcode);
+                return retcode;
             }
             break;
 
@@ -498,6 +503,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0);
             if(retcode < 0){
                 printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", retcode);
+                return retcode;
             }
             break;
 

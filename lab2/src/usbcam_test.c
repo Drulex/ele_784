@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
 	unsigned int mySize;
 	int i = 0;
 	int max = atoi(argv[2]);
+	long ioctl_return;
 
 	inBuffer = malloc((USBCAM_BUF_SIZE) * sizeof(unsigned char));
 	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
@@ -63,7 +64,11 @@ int main(int argc, char *argv[]) {
 
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
-
+		if(fd)
+			printf("File descriptor OPEN\n");
+		else
+			printf("File descriptor ERROR: %d\n", fd);
+		/*
 		if(!strcmp(argv[1], "up")){
 			printf("PANTILT: DIR=UP, VALUE=%i\n", max);
 			for(i=0; i<max; i++){
@@ -109,13 +114,27 @@ int main(int argc, char *argv[]) {
 			free(finalBuffer);
 			free(inBuffer);
 			return -1;
-		}
+		}*/
 
-		/*
-		ioctl(fd, IOCTL_STREAMON); // #2
-		ioctl(fd, IOCTL_GRAB); // #3
+		ioctl_return = ioctl(fd, IOCTL_STREAMON); // #2
+		if(!ioctl_return)
+			printf("IOCTL_STREAMON OK!");
+		else
+			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
+
+		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
+		if(!ioctl_return)
+			printf("IOCTL_GRAB OK!");
+		else
+			printf("IOCTL_GRAB ERROR: %ld\n", ioctl_return);
+
 		mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+
 		ioctl(fd, IOCTL_STREAMOFF); // #5
+		if(!ioctl_return)
+			printf("IOCTL_STREAMOFF OK!");
+		else
+			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);
 
 		// #6
 		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
@@ -125,7 +144,7 @@ int main(int argc, char *argv[]) {
 		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
 		fclose(foutput); // #8
 
-		*/
+		
 	}
 
 	close(fd);
