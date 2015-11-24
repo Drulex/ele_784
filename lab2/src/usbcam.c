@@ -52,7 +52,7 @@ module_init(usbcam_init);
 module_exit(usbcam_exit);
 
 // Private function prototypes
-static int urbInit(struct usb_interface *intf);
+static int urbInit(void);
 static void urbCompletionCallback(struct urb *urb);
 
 
@@ -438,7 +438,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
         case IOCTL_GRAB:
             printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_GRAB\n");
-            urbInit(&cam_dev->usbcam_interface);
+            urbInit();
             break;
 
         case IOCTL_PANTILT:
@@ -519,15 +519,17 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-int urbInit(struct usb_interface *intf) {
+int urbInit(void) {
     int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
 
     myStatus = 0;
     myLengthUsed = 0;
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-    struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
+    //struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
+    struct usb_host_interface *cur_altsetting = cam_dev->usbcam_interface->cur_altsetting;
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-    struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+    //struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+    struct usb_endpoint_descriptor endpointDesc = cam_dev->usbcam_interface->cur_altsetting->endpoint[0].desc;
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
