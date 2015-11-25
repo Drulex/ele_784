@@ -32,7 +32,7 @@
 #define USBCAM_BUF_SIZE		42666
 
 int main(int argc, char *argv[]) {
-	if(!argv[1] || !argv[2]){
+	/*if(!argv[1] || !argv[2]){
 		printf("ERROR: Unable to parse arguments!. Please provide arguments as shown below:\n");
 		printf("./usbcam_test 'direction' 'value'\n");
 		printf("Example: ./usbcam_test down 10\n");
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 		printf("Example: ./usbcam_test reset 0\n");
 		printf("Now exiting\n");
 		return -1;
-	}
+	}*/
 
 	FILE *foutput;
 	static int fd;
@@ -118,32 +118,44 @@ int main(int argc, char *argv[]) {
 
 		ioctl_return = ioctl(fd, IOCTL_STREAMON); // #2
 		if(!ioctl_return)
-			printf("IOCTL_STREAMON OK!");
-		else
+			printf("IOCTL_STREAMON OK!\n");
+		else {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
+			return -1;
+		}
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(!ioctl_return)
-			printf("IOCTL_GRAB OK!");
-		else
+			printf("IOCTL_GRAB OK!\n");
+		else {
 			printf("IOCTL_GRAB ERROR: %ld\n", ioctl_return);
+			return -1;
+		}
 
-		mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+		sleep(10);
+
+		/*mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+
+		if(mySize < 0) {
+			printf("READ ERROR: %u\n", mySize);
+			return -1;
+		}*/
 
 		ioctl(fd, IOCTL_STREAMOFF); // #5
 		if(!ioctl_return)
-			printf("IOCTL_STREAMOFF OK!");
-		else
+			printf("IOCTL_STREAMOFF OK!\n");
+		else {
 			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);
+			return -1;
+		}
 
 		// #6
-		memcpy(finalBuffer, inBuffer, HEADERFRAME1);
+		/*memcpy(finalBuffer, inBuffer, HEADERFRAME1);
 		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
 		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
 
-		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7
+		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7*/
 		fclose(foutput); // #8
-
 		
 	}
 
