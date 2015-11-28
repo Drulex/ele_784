@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 
 		// open driver in READONLY
 		fd = open(USBCAM_DEVICE, O_RDONLY);
-		if(fd)
+		if(fd >= 0)
 			printf("File descriptor OPEN\n");
 		else
 			printf("File descriptor ERROR: %d\n", fd);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 		}*/
 
 		ioctl_return = ioctl(fd, IOCTL_STREAMON); // #2
-		if(!ioctl_return)
+		if(ioctl_return >= 0)
 			printf("IOCTL_STREAMON OK!\n");
 		else {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
         sleep(5);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
-		if(!ioctl_return)
+		if(ioctl_return >= 0)
 			printf("IOCTL_GRAB OK!\n");
 		else {
 			printf("IOCTL_GRAB ERROR: %ld\n", ioctl_return);
@@ -142,8 +142,8 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}*/
 
-		ioctl(fd, IOCTL_STREAMOFF); // #5
-		if(!ioctl_return)
+		ioctl_return = ioctl(fd, IOCTL_STREAMOFF); // #5
+		if(ioctl_return >= 0)
 			printf("IOCTL_STREAMOFF OK!\n");
 		else {
 			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);

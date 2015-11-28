@@ -192,7 +192,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         else
             printk(KERN_WARNING "===usbcam_probe: Registered driver with USBCORE\n");
         //usb_set_interface (dev, interface->desc.bInterfaceNumber, interface->desc.bAlternateSetting);
-        usb_set_interface (dev, 1, 4);
+        usb_set_interface (cam_dev->usbdev, 1, 4);
         printk(KERN_WARNING "===usbcam_probe: all good\n");
 
         printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
@@ -281,7 +281,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
         usb_free_coherent(cam_dev->usbdev, cam_dev->myUrb[i]->transfer_buffer_length, cam_dev->myUrb[i]->transfer_buffer, cam_dev->myUrb[i]->transfer_dma);
 
         // free urb struct
-        usb_free_urb(&cam_dev->myUrb[i]);
+        usb_free_urb(cam_dev->myUrb[i]);
     }
 
     printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
@@ -483,13 +483,19 @@ int urbInit(struct usb_interface *intf) {
 
     myStatus = 0;
     myLengthUsed = 0;
-    struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
-    struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+    const struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
+    const struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+
+    //cur_altsetting = intf->cur_altsetting;
+    //endpointDesc = cur_altsetting->endpoint[0].desc;
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
     size = myPacketSize * nbPackets;
     nbUrbs = 5;
+    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint address %d\n", endpointDesc.bEndpointAddress);
+    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint packet size %d\n", myPacketSize);
+    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint interval %d\n", endpointDesc.bInterval);
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     // reset flag_done
@@ -551,8 +557,13 @@ int urbInit(struct usb_interface *intf) {
 
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     for(i = 0; i < nbUrbs; i++){
+
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        if ((ret = usb_submit_urb(cam_dev->myUrb[i], GFP_KERNEL)) < 0) {
+        ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
+
+        printk(KERN_WARNING "===usbcam_urbinit: SUBMIT URB VALUE is %d\n", ret);
+
+        if (ret < 0) {
             printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
             return ret;
