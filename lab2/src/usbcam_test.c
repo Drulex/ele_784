@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
+        sleep(5);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(!ioctl_return)
