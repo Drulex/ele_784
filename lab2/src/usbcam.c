@@ -64,29 +64,29 @@ static char * myData;
 static int flag_done;
 
 // Structure to keep track of endpoints
-typedef struct {
+/*typedef struct {
 	unsigned int length;
 	unsigned char endpoint_direction; // bitmask comparison
 	unsigned char endpoint_type; // bitmask comparison
 	unsigned int endpoint_max_packet_size;
 	unsigned int endpoint_interval_time;
-} USB_Endpoint_Info;
+} USB_Endpoint_Info;*/
 
 // Structure to keep track of interfaces
-typedef struct {
+/*typedef struct {
 	unsigned int interface_number;
 	unsigned int num_endpoints;
 	unsigned int interface_class;
 	unsigned int interface_subclass;
 	USB_Endpoint_Info *usb_endpoint_info;
-} USB_Interface_Info;
+} USB_Interface_Info;*/
 
 // General data structure for driver
 typedef struct {
     struct usb_device *usbdev;
     unsigned int number_interfaces;
     int active_interface;
-    USB_Interface_Info *usb_int_info;
+    //USB_Interface_Info *usb_int_info;
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
     struct semaphore SemURB;
@@ -496,7 +496,10 @@ int urbInit(struct usb_interface *intf) {
     flag_done = 0;
 
     for (i = 0; i < nbUrbs; ++i) {
-        usb_free_urb(cam_dev->myUrb[i]);
+
+        if(cam_dev->myUrb[i] != NULL)
+            usb_free_urb(cam_dev->myUrb[i]);
+        
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_KERNEL);
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
