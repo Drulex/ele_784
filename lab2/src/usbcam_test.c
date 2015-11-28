@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-        sleep(5);
+        sleep(2);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(ioctl_return >= 0)
@@ -133,14 +133,14 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 
-		sleep(10);
+		sleep(2);
 
-		/*mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+        mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
 
 		if(mySize < 0) {
 			printf("READ ERROR: %u\n", mySize);
 			return -1;
-		}*/
+		}
 
 		ioctl_return = ioctl(fd, IOCTL_STREAMOFF); // #5
 		if(ioctl_return >= 0)
@@ -151,13 +151,17 @@ int main(int argc, char *argv[]) {
 		}
 
 		// #6
-		/*memcpy(finalBuffer, inBuffer, HEADERFRAME1);
+        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        memcpy(finalBuffer, inBuffer, HEADERFRAME1);
+        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
+        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
+        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
 		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7*/
 		fclose(foutput); // #8
-		
+
 	}
 
 	close(fd);

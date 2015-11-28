@@ -59,8 +59,8 @@ static void urbCompletionCallback(struct urb *urb);
 
 static unsigned int myStatus;
 static unsigned int myLength = 42666;
-static unsigned int myLengthUsed;
-static char * myData;
+static unsigned int myLengthUsed = 0;
+static char *myData;
 static int flag_done;
 
 // Structure to keep track of endpoints
@@ -203,7 +203,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
         cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
 
-
+        myData = kmalloc(sizeof(myLength), GFP_KERNEL);
 
         return 0;
     }
@@ -482,7 +482,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
 int urbInit(struct usb_interface *intf) {
 
-    int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
+    unsigned int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
     //struct usb_device *dev = usb_get_intfdata(intf);
 
     myStatus = 0;
@@ -507,13 +507,13 @@ int urbInit(struct usb_interface *intf) {
     // reset flag_done
     flag_done = 0;
 
-    for (i = 0; i < nbUrbs; ++i) {
+    for (i = 0; i < nbUrbs; i++) {
 
         //if(cam_dev->myUrb[i] != NULL)
-            usb_free_urb(cam_dev->myUrb[i]);
-        
+        usb_free_urb(cam_dev->myUrb[i]);
+
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_KERNEL);
+        cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_ATOMIC);
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         if (cam_dev->myUrb[i] == NULL) {
             printk(KERN_WARNING "===usbcam_urbInit: ERROR allocating memory for urb!\n");
@@ -523,7 +523,7 @@ int urbInit(struct usb_interface *intf) {
         // NOTE: usb_buffer_alloc renamed to usb_alloc_coherent
         // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(cam_dev->usbdev, size, GFP_DMA, &cam_dev->myUrb[i]->transfer_dma);
+        cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(cam_dev->usbdev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
         if (cam_dev->myUrb[i]->transfer_buffer == NULL) {
@@ -559,37 +559,50 @@ int urbInit(struct usb_interface *intf) {
             cam_dev->myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
             cam_dev->myUrb[i]->iso_frame_desc[j].length = myPacketSize;
         }
-    }
-
-    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-    for(i = 0; i < nbUrbs; i++){
-
         printk(KERN_WARNING "=================\n");
         printk(KERN_WARNING "===usbcam_urbinit: URB# %d pipe value is %d\n", i, cam_dev->myUrb[i]->pipe);
         printk(KERN_WARNING "===usbcam_urbinit: URB# %d transfer flags are %d\n", i, cam_dev->myUrb[i]->transfer_flags);
         printk(KERN_WARNING "===usbcam_urbinit: URB# %d number of packets is %d\n", i, cam_dev->myUrb[i]->number_of_packets);
         printk(KERN_WARNING "===usbcam_urbinit: URB# %d transfer_buffer_length is %d\n", i, cam_dev->myUrb[i]->transfer_buffer_length);
         printk(KERN_WARNING "===usbcam_urbinit: URB# %d interval is %d\n", i, cam_dev->myUrb[i]->interval);
+
+        ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
+
+        printk(KERN_WARNING "===usbcam_urbinit: SUBMIT URB VALUE is %d\n", ret);
+
+        if (ret < 0) {
+            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
+            return ret;
+        }
+        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+
+    }
+/*
+    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    for(i = 0; i < nbUrbs; i++){
         printk(KERN_WARNING "===usbcam_urbinit: usb_submit_urb is after this (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         //ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
 
         //printk(KERN_WARNING "===usbcam_urbinit: SUBMIT URB VALUE is %d\n", ret);
 
-        /*if (ret < 0) {
+        if (ret < 0) {
             printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
             return ret;
-        }*/
+        }
         //printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     }
+    */
     return 0;
 }
 
 
 static void urbCompletionCallback(struct urb *urb) {
+    printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     int ret, urbCounterTotal;
     int i;
-    unsigned char * data;
+    unsigned char *data;
     unsigned int len;
     unsigned int maxlen;
     unsigned int nbytes;
@@ -618,7 +631,9 @@ static void urbCompletionCallback(struct urb *urb) {
             maxlen = myLength - myLengthUsed ;
             mem = myData + myLengthUsed;
             nbytes = min(len, maxlen);
+            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             memcpy(mem, data + data[0], nbytes);
+            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             myLengthUsed += nbytes;
 
             if (len > maxlen) {
@@ -632,19 +647,24 @@ static void urbCompletionCallback(struct urb *urb) {
         }
 
         if (!(myStatus == 1)){
+            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             if ((ret = usb_submit_urb(urb, GFP_ATOMIC)) < 0) {
                 printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR submitting URB: %i\n", ret);
             }
         }
+
         else {
+            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
             if(down_interruptible(&cam_dev->SemURB)){
                 printk(KERN_WARNING "===usbcam_urbCompletionCallback: Unable to lock URB semaphore (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
             }
             else{
+                printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
                 atomic_inc(&cam_dev->urbCounter); // increment counter +1
                 urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
                 if(urbCounterTotal == 5){
+                    printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
                     // unlock semaphore
                     up(&cam_dev->SemURB);
 
