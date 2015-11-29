@@ -129,51 +129,25 @@ static void __exit usbcam_exit(void) {
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
 
     const struct usb_host_interface *interface;
-    //const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
     int i;
     int n, m, retnum;//, altSetNum;
-	//int activeInterface = -1;
     struct USBCam_Dev *cam_dev = NULL;
 
 	// Allocate memory to local driver structure
-    //cam_dev = kmalloc(sizeof(USBCam_Dev), GFP_KERNEL);
+    cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
 
-    //if(!cam_dev)
-    //	printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    if(!cam_dev)
+        printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
-    //cam_dev->usbdev = usb_get_dev(dev);
-    //cam_dev->active_interface = -1;
-    //cam_dev->number_interfaces = intf->num_altsetting;
+    cam_dev->usbdev = usb_get_dev(dev);
+    cam_dev->active_interface = -1;
     interface = &intf->altsetting[n];
-
-    //altSetNum = interface->desc.bAlternateSetting;
 
     if(interface->desc.bInterfaceClass == CC_VIDEO) {
         if(interface->desc.bInterfaceSubClass == SC_VIDEOCONTROL) {
             printk(KERN_WARNING "===usbcam_probe: FOUND INTERFACE!\n");
-            cam_dev = (struct USBCam_Dev *) kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
-            if(cam_dev == NULL){
-                printk(KERN_WARNING "===usbcam_probe: Error allocating memory for cam_dev\n");
-                return -ENOMEM;
-            }
-            cam_dev->usbdev = usb_get_dev(dev);
-            cam_dev->usbcam_interface = intf;
-            usb_set_intfdata(intf, cam_dev);
-
-            retnum = usb_register_dev(intf, &usbcam_class);
-            if(retnum < 0)
-                printk(KERN_WARNING "===usbcam_probe: Error registering driver with USBCORE\n");
-            else
-                printk(KERN_WARNING "===usbcam_probe: Registered driver with USBCORE\n");
-
-            printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
-            sema_init(&cam_dev->SemURB, 1);
-
-            printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
-            cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
-
-            return 0;
+                        return 0;
         }
         if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
             printk(KERN_WARNING "===usbcam_probe: Found proper Interface Subclass\n");
@@ -186,7 +160,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         return -1;// end class check if
 
     printk(KERN_WARNING "===usbcam_probe: Done detecting Interface(s)\n");
-/*
+
     if(cam_dev->active_interface != -1){
         usb_set_intfdata (intf, cam_dev); // This is where the cam_dev structure is associated with the interface selected
         retnum = usb_register_dev(intf, &usbcam_class);
@@ -209,7 +183,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         printk(KERN_WARNING "===usbcam_probe: could not associate interface to device\n");
         return -1;
     }
-*/
+
 }
 
 void usbcam_disconnect(struct usb_interface *intf) {
@@ -282,11 +256,14 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     for(i=0; i<5; i++){
         usb_kill_urb(cam_dev->myUrb[i]);
 
+        printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         // free urb buffer, really unsure about this..
         usb_free_coherent(cam_dev->usbdev, cam_dev->myUrb[i]->transfer_buffer_length, cam_dev->myUrb[i]->transfer_buffer, cam_dev->myUrb[i]->transfer_dma);
+        printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
         // free urb struct
         usb_free_urb(cam_dev->myUrb[i]);
+        printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         if(cam_dev->myUrb[i] != NULL)
             printk(KERN_WARNING "===usbcam_read: URB not freed properly!\n");
         else
