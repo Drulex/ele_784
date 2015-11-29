@@ -53,7 +53,7 @@ module_init(usbcam_init);
 module_exit(usbcam_exit);
 
 // Private function prototypes
-static int urbInit(struct usb_interface *intf);
+static int urbInit(struct usb_interface *intf, struct usb_device *dev);
 static void urbCompletionCallback(struct urb *urb);
 
 // global vars
@@ -61,6 +61,7 @@ static unsigned int myStatus = 0;
 static unsigned int myLength = 42666;
 static unsigned int myLengthUsed = 0;
 static char myData[42666];
+static int flag_done = 0;
 
 // General data structure for driver
 struct USBCam_Dev {
@@ -131,7 +132,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     //const struct usb_endpoint_descriptor *endpoint;
     struct usb_device *dev = interface_to_usbdev(intf);
     int i;
-    //int n, m, retnum;//, altSetNum;
+    int n, m, retnum;//, altSetNum;
 	//int activeInterface = -1;
     struct USBCam_Dev *cam_dev = NULL;
 
@@ -254,7 +255,9 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     int i;
     int bytes_copied = 0;
     struct usb_interface *intf;
+    struct USBCam_Dev *cam_dev;
     intf = filp->private_data;
+    cam_dev = usb_get_intfdata(intf);
     // wait for callback to be done; don't know how to do that yet. Apparently we have to use completion interface??
 
     while(!flag_done){
@@ -269,7 +272,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     // in case something went wrong
-    if(bytes_copied <= 0){
+    if(bytes_copied < 0){
         printk(KERN_WARNING "===usbcam_read: error while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
         return -EFAULT;
     }
@@ -284,6 +287,10 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
 
         // free urb struct
         usb_free_urb(cam_dev->myUrb[i]);
+        if(cam_dev->myUrb[i] != NULL)
+            printk(KERN_WARNING "===usbcam_read: URB not freed properly!\n");
+        else
+            printk(KERN_WARNING "===usbcam_read: URB freed!\n");
     }
 
     printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
@@ -301,7 +308,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
     int retcode;
     int pantilt = 0x03;
     struct usb_interface *intf = filp->private_data;
-    struct usb_device *dev = usb_get_intfdata(intf);
+    struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
     //NOTE let's not forget to add access protection in this function!
 
@@ -397,7 +404,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
         case IOCTL_GRAB:
             printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_GRAB\n");
-            urbInit(intf);
+            urbInit(intf, cam_dev->usbdev);
             break;
 
         case IOCTL_PANTILT:
@@ -478,7 +485,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-int urbInit(struct usb_interface *intf) {
+int urbInit(struct usb_interface *intf, struct usb_device *dev) {
 
     unsigned int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
     //struct usb_device *dev = usb_get_intfdata(intf);
@@ -487,6 +494,8 @@ int urbInit(struct usb_interface *intf) {
     myLengthUsed = 0;
     const struct usb_host_interface *cur_altsetting = intf->cur_altsetting;
     const struct usb_endpoint_descriptor endpointDesc = cur_altsetting->endpoint[0].desc;
+
+    struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
     //cur_altsetting = intf->cur_altsetting;
     //endpointDesc = cur_altsetting->endpoint[0].desc;
@@ -509,7 +518,6 @@ int urbInit(struct usb_interface *intf) {
 
         //if(cam_dev->myUrb[i] != NULL)
         usb_free_urb(cam_dev->myUrb[i]);
-
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_ATOMIC);
         printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
@@ -606,6 +614,7 @@ static void urbCompletionCallback(struct urb *urb) {
     unsigned int nbytes;
     void * mem;
 
+    struct USBCam_Dev *cam_dev = urb->context;
     if(urb->status == 0){
 
         for (i = 0; i < urb->number_of_packets; ++i) {
@@ -653,25 +662,18 @@ static void urbCompletionCallback(struct urb *urb) {
 
         else {
             printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-
-            if(down_interruptible(&cam_dev->SemURB)){
-                printk(KERN_WARNING "===usbcam_urbCompletionCallback: Unable to lock URB semaphore (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
-            }
-            else{
+            atomic_inc(&cam_dev->urbCounter); // increment counter +1
+            urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
+            if(urbCounterTotal == 5){
                 printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-                atomic_inc(&cam_dev->urbCounter); // increment counter +1
-                urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
-                if(urbCounterTotal == 5){
-                    printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-                    // unlock semaphore
-                    up(&cam_dev->SemURB);
+                // unlock semaphore
+            //    up(&cam_dev->SemURB);
 
-                    // reset urbCounter
-                    atomic_set(&cam_dev->urbCounter, 0);
+                // reset urbCounter
+                atomic_set(&cam_dev->urbCounter, 0);
 
-                    // set flag_done
-                    flag_done = 1;
-                }
+                // set flag_done
+                flag_done = 1;
             }
         }
     }
