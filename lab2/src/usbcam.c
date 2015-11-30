@@ -69,7 +69,8 @@ struct USBCam_Dev {
     int active_interface;
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
-    struct semaphore SemURB;
+    struct semaphore sem_read;
+    struct semaphore sem_grab;
     struct completion *urb_done;
     atomic_t urbCounter;
 };
@@ -167,11 +168,14 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         else
             printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
         usb_set_interface(cam_dev->usbdev, 1, 4);
-        sema_init(&cam_dev->SemURB, 1);
+
+        // initialize access protection variables and such
+        sema_init(&cam_dev->sem_read, 0);
+        sema_init(&cam_dev->sem_grab, 0);
         cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
         cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
         init_completion(cam_dev->urb_done);
-        printk(KERN_WARNING "===usbcam_PROBE: all good\n");
+        printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
 
         return 0;
     }
@@ -228,6 +232,11 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     struct USBCam_Dev *cam_dev;
     intf = filp->private_data;
     cam_dev = usb_get_intfdata(intf);
+
+    if (down_trylock(&cam_dev->sem_read)) {
+        printk(KERN_WARNING "===usbcam_READ: sem_read not available! Exiting!\n");
+        return -ENOEXEC;
+    }
 
     // wait for callback to be done
     // perhaps perform some access protection as well?
@@ -365,6 +374,8 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                 printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
                 return retcode;
             }
+            // release sem_grab
+            up(&cam_dev->sem_grab);
             break;
 
         case IOCTL_STREAMOFF:
@@ -386,7 +397,13 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
         case IOCTL_GRAB:
             printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_GRAB\n");
+            if (down_trylock(&cam_dev->sem_grab)) {
+                printk(KERN_WARNING "===usbcam_IOCTL: sem_grab not available. Exiting!\n");
+                return -ENOEXEC;
+            }
             urbInit(intf, cam_dev->usbdev);
+            // release sem_read
+            up(&cam_dev->sem_read);
             break;
 
         case IOCTL_PANTILT:
@@ -640,14 +657,8 @@ static void urbCompletionCallback(struct urb *urb) {
             urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
             if(urbCounterTotal == 5) {
                 printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-                // unlock semaphore
-            //    up(&cam_dev->SemURB);
-
                 // reset urbCounter
                 atomic_set(&cam_dev->urbCounter, 0);
-
-                // set flag_done
-                //flag_done = 1;
                 // mark urb complete
                 complete(cam_dev->urb_done);
             }
