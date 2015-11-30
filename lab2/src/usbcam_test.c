@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-        sleep(4);
+        sleep(2);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(ioctl_return >= 0)
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 
-		sleep(4);
+		sleep(2);
 
         mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
         printf("Bytes copied from cam: %u\n", mySize);
@@ -142,6 +142,7 @@ int main(int argc, char *argv[]) {
 			printf("READ ERROR: %u\n", mySize);
 			return -1;
 		}
+		sleep(2);
 
 		ioctl_return = ioctl(fd, IOCTL_STREAMOFF); // #5
 		if(ioctl_return >= 0)
@@ -150,8 +151,12 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
+		sleep(2);
 
-        printf("Contents of inbuffer: %s\n", inBuffer);
+        if(inBuffer == NULL)
+            printf("ERROR: inBuffer is NULL!!");
+
+        printf("Contents of inbuffer: %s\n", &inBuffer);
 		// #6
         printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         memcpy(finalBuffer, inBuffer, HEADERFRAME1);
