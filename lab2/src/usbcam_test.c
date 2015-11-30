@@ -44,8 +44,8 @@ int main(int argc, char *argv[]) {
 
 	FILE *foutput;
 	static int fd;
-	unsigned char * inBuffer;
-	unsigned char * finalBuffer;
+	unsigned char *inBuffer;
+	unsigned char *finalBuffer;
 	unsigned int mySize;
 	int i = 0;
 	int max = atoi(argv[2]);
@@ -54,10 +54,21 @@ int main(int argc, char *argv[]) {
 	inBuffer = malloc((USBCAM_BUF_SIZE) * sizeof(unsigned char));
 	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
 
-	if((!inBuffer) || (!finalBuffer)) {
+    if((!inBuffer) || (!finalBuffer)) {
 		printf("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
 		return -1;
 	}
+
+
+    // flush both buffers
+    for(i=0; i<USBCAM_BUF_SIZE; i++) {
+        inBuffer[i] = '\0';
+        finalBuffer[i] = '\0';
+    }
+
+    for(i=USBCAM_BUF_SIZE; i<2*USBCAM_BUF_SIZE; i++) {
+        finalBuffer[i] = '\0';
+    }
 
 	foutput = fopen(USBCAM_IMAGE, "wb"); // #1
 	if(foutput != NULL) {
@@ -156,7 +167,11 @@ int main(int argc, char *argv[]) {
         if(inBuffer == NULL)
             printf("ERROR: inBuffer is NULL!!");
 
-        printf("Contents of inbuffer: %s\n", &inBuffer);
+        printf("Contents of inbuffer:\n");
+        for(i=0; i<USBCAM_BUF_SIZE; i++){
+            printf("%c", &inBuffer[i]);
+        }
+        printf("\n");
 		// #6
         printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         memcpy(finalBuffer, inBuffer, HEADERFRAME1);

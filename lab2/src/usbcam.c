@@ -65,7 +65,6 @@ static char myData[42666];
 // General data structure for driver
 struct USBCam_Dev {
     struct usb_device *usbdev;
-    unsigned int number_interfaces;
     int active_interface;
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
@@ -235,7 +234,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     cam_dev = usb_get_intfdata(intf);
 
     if (down_trylock(&cam_dev->sem_read)) {
-        printk(KERN_WARNING "===usbcam_READ: sem_read not available! Exiting!\n");
+        printk(KERN_ERR "===usbcam_READ: sem_read not available! Exiting!\n");
         return -ENOEXEC;
     }
 
@@ -249,7 +248,10 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     // copy data to user space
     printk(KERN_WARNING "===usbcam_READ: COPY TO USER\n");
     bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
-    printk(KERN_WARNING "===usbcam_READ: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    printk(KERN_WARNING "===usbcam_READ: data copied to user:\n");
+    for(i=0; i<myLengthUsed; i++){
+        printk(KERN_WARNING "%c", myData[i]);
+    }
 
     // in case something went wrong
     if(bytes_copied < 0) {
