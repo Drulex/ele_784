@@ -27,7 +27,7 @@
 8) Fermer le fichier ouvert à l’étape #1
  */
 
-#define USBCAM_IMAGE 		"/tmp/usbcam_image.jpg"
+#define USBCAM_IMAGE 		"usbcam_image.jpg"
 #define USBCAM_DEVICE 		"/dev/usbcam1"
 #define USBCAM_BUF_SIZE		42666
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-        sleep(2);
+        sleep(1);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(ioctl_return >= 0)
@@ -133,9 +133,10 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 
-		sleep(2);
+		sleep(1);
 
         mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+        printf("Bytes copied from cam: %u\n", mySize);
 
 		if(mySize < 0) {
 			printf("READ ERROR: %u\n", mySize);

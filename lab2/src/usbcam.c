@@ -61,7 +61,6 @@ static unsigned int myStatus = 0;
 static unsigned int myLength = 42666;
 static unsigned int myLengthUsed = 0;
 static char myData[42666];
-static int flag_done = 0;
 
 // General data structure for driver
 struct USBCam_Dev {
@@ -71,6 +70,7 @@ struct USBCam_Dev {
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
     struct semaphore SemURB;
+    struct completion *urb_done;
     atomic_t urbCounter;
 };
 
@@ -168,13 +168,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         else
             printk(KERN_WARNING "===usbcam_probe: Registered driver with USBCORE\n");
         usb_set_interface(cam_dev->usbdev, 1, 4);
-        printk(KERN_WARNING "===usbcam_probe: all good\n");
-
-        printk(KERN_WARNING "===usbcam_init: Initializing URB status Semaphore\n");
         sema_init(&cam_dev->SemURB, 1);
-
-        printk(KERN_WARNING "===usbcam_init: Initializing URB counter to 0\n");
         cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
+        cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
+        init_completion(cam_dev->urb_done);
+        printk(KERN_WARNING "===usbcam_probe: all good\n");
 
         return 0;
     }
@@ -233,11 +231,11 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     cam_dev = usb_get_intfdata(intf);
 
     // wait for callback to be done
-    while(!flag_done) {
-        printk(KERN_WARNING "===usbcam_read: Waiting for URB callback completion\n");
-    }
-
     // perhaps perform some access protection as well?
+    printk(KERN_WARNING "===usbcam_read: Waiting for urb callback completion...\n");
+    wait_for_completion(cam_dev->urb_done);
+    printk(KERN_WARNING "===usbcam_read: Completion done!\n");
+
 
     // copy data to user space
     printk(KERN_WARNING "===usbcam_read: COPY TO USER\n");
@@ -496,9 +494,6 @@ int urbInit(struct usb_interface *intf, struct usb_device *dev) {
     printk(KERN_WARNING "===usbcam_urbinit_datacheck: URB transfer flag is %d\n", URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP);
     printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
-    // reset flag_done
-    flag_done = 0;
-
     for (i = 0; i < nbUrbs; i++) {
 
         //if(cam_dev->myUrb[i] != NULL)
@@ -629,13 +624,15 @@ static void urbCompletionCallback(struct urb *urb) {
         }
 
         if (!(myStatus == 1)) {
-            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             if ((ret = usb_submit_urb(urb, GFP_ATOMIC)) < 0) {
                 printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR submitting URB: %i\n", ret);
             }
         }
 
         else {
+            // should this be here?
+            myStatus = 0;
+
             printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             atomic_inc(&cam_dev->urbCounter); // increment counter +1
             urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
@@ -648,7 +645,9 @@ static void urbCompletionCallback(struct urb *urb) {
                 atomic_set(&cam_dev->urbCounter, 0);
 
                 // set flag_done
-                flag_done = 1;
+                //flag_done = 1;
+                // mark urb complete
+                complete(cam_dev->urb_done);
             }
         }
     }
