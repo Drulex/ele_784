@@ -74,7 +74,6 @@ struct USBCam_Dev {
     atomic_t urbCounter;
 };
 
-struct class *my_class;
 
 static struct usb_device_id usbcam_table[] = {
 // { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
@@ -111,18 +110,18 @@ static struct usb_class_driver usbcam_class = {
 
 static int __init usbcam_init(void) {
     int res;
-    printk(KERN_WARNING "===usbcam_init: registering usb device with usbcore\n");
+    printk(KERN_WARNING "===usbcam_INIT: registering usb device with usbcore\n");
     res = usb_register(&usbcam_driver);
     if(res)
-        printk(KERN_WARNING "===usbcam_init: ERROR registering USB device %d\n", res);
+        printk(KERN_WARNING "===usbcam_INIT: ERROR registering USB device %d\n", res);
     else
-        printk(KERN_WARNING "===usbcam_init: device registered with return value: %d\n", res);
+        printk(KERN_WARNING "===usbcam_INIT: device registered with return value: %d\n", res);
 
     return 0;
 }
 
 static void __exit usbcam_exit(void) {
-    printk(KERN_WARNING "===usbcam_exit: deregistering usb device\n");
+    printk(KERN_WARNING "===usbcam_EXIT: deregistering usb device\n");
     usb_deregister(&usbcam_driver);
 }
 
@@ -137,7 +136,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
 
     if(!cam_dev)
-        printk(KERN_WARNING "===usbcam_probe: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     cam_dev->usbdev = usb_get_dev(dev);
     cam_dev->active_interface = -1;
@@ -145,11 +144,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
     if(interface->desc.bInterfaceClass == CC_VIDEO) {
         if(interface->desc.bInterfaceSubClass == SC_VIDEOCONTROL) {
-            printk(KERN_WARNING "===usbcam_probe: FOUND INTERFACE!\n");
-                        return 0;
+            printk(KERN_WARNING "===usbcam_PROBE: FOUND INTERFACE!\n");
+            return 0;
         }
         if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
-            printk(KERN_WARNING "===usbcam_probe: Found proper Interface Subclass\n");
+            printk(KERN_WARNING "===usbcam_PROBE: Found proper Interface Subclass\n");
             cam_dev->active_interface = 1;
         }
         else
@@ -158,26 +157,26 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     else
         return -1;// end class check if
 
-    printk(KERN_WARNING "===usbcam_probe: Done detecting Interface(s)\n");
+    printk(KERN_WARNING "===usbcam_PROBE: Done detecting Interface(s)\n");
 
     if(cam_dev->active_interface != -1) {
         usb_set_intfdata (intf, cam_dev); // This is where the cam_dev structure is associated with the interface selected
         retnum = usb_register_dev(intf, &usbcam_class);
         if(retnum < 0)
-            printk(KERN_WARNING "===usbcam_probe: Error registering driver with USBCORE\n");
+            printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
         else
-            printk(KERN_WARNING "===usbcam_probe: Registered driver with USBCORE\n");
+            printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
         usb_set_interface(cam_dev->usbdev, 1, 4);
         sema_init(&cam_dev->SemURB, 1);
         cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
         cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
         init_completion(cam_dev->urb_done);
-        printk(KERN_WARNING "===usbcam_probe: all good\n");
+        printk(KERN_WARNING "===usbcam_PROBE: all good\n");
 
         return 0;
     }
     else{
-        printk(KERN_WARNING "===usbcam_probe: could not associate interface to device\n");
+        printk(KERN_WARNING "===usbcam_PROBE: could not associate interface to device\n");
         return -1;
     }
 
@@ -193,14 +192,14 @@ int usbcam_open (struct inode *inode, struct file *filp) {
     struct usb_interface *intf;
     int subminor;
 
-    printk(KERN_WARNING "===usbcam_open: Opening usbcam driver in READONLY MODE!\n");
+    printk(KERN_WARNING "===usbcam_OPEN: Opening usbcam driver in READONLY MODE!\n");
 
     subminor = iminor(inode);
 
     intf = usb_find_interface(&usbcam_driver, subminor);
 
     if(!intf) {
-    	printk(KERN_WARNING "===usbcam_open: Unable to open device driver\n");
+    	printk(KERN_WARNING "===usbcam_OPEN: Unable to open device driver\n");
     	return -ENODEV;
     }
 
@@ -212,10 +211,10 @@ int usbcam_release (struct inode *inode, struct file *filp) {
 
     switch(filp->f_flags & O_ACCMODE) {
         case O_RDONLY:
-            printk(KERN_WARNING "===usbcam_release: Releasing usbcam driver in from READONLY MODE!\n");
+            printk(KERN_WARNING "===usbcam_RELEASE: Releasing usbcam driver in from READONLY MODE!\n");
         break;
         default:
-            printk(KERN_WARNING "===usbcam_release: UNKNOWN RELEASE MODE!\n");
+            printk(KERN_WARNING "===usbcam_RELEASE: UNKNOWN RELEASE MODE!\n");
             return -ENOTTY;
         break;
     }
@@ -232,48 +231,51 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
 
     // wait for callback to be done
     // perhaps perform some access protection as well?
-    printk(KERN_WARNING "===usbcam_read: Waiting for urb callback completion...\n");
+    printk(KERN_WARNING "===usbcam_READ: Waiting for urb callback completion...\n");
     wait_for_completion(cam_dev->urb_done);
-    printk(KERN_WARNING "===usbcam_read: Completion done!\n");
+    printk(KERN_WARNING "===usbcam_READ: Completion done!\n");
 
 
     // copy data to user space
-    printk(KERN_WARNING "===usbcam_read: COPY TO USER\n");
+    printk(KERN_WARNING "===usbcam_READ: COPY TO USER\n");
     bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
-    printk(KERN_WARNING "===usbcam_read: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    printk(KERN_WARNING "===usbcam_READ: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     // in case something went wrong
     if(bytes_copied < 0) {
-        printk(KERN_WARNING "===usbcam_read: error while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+        printk(KERN_WARNING "===usbcam_READ: error while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
         return -EFAULT;
     }
 
     // destroy all URB
     for(i=0; i<5; i++) {
-        printk(KERN_WARNING "===usbcam_read:=====================\n");
-        printk(KERN_WARNING "===usbcam_read:INFO ON URB ABOUT TO BE DESTROYED\n");
-        printk(KERN_WARNING "===usbcam_read:transfer_buffer_length: %u\n", cam_dev->myUrb[i]->transfer_buffer_length);
-        printk(KERN_WARNING "===usbcam_read:transfer_dma: %lu\n", cam_dev->myUrb[i]->transfer_dma);
+        printk(KERN_WARNING "===usbcam_READ:=====================\n");
+        printk(KERN_WARNING "===usbcam_READ:INFO ON URB ABOUT TO BE DESTROYED\n");
+        printk(KERN_WARNING "===usbcam_READ:transfer_buffer_length: %u\n", cam_dev->myUrb[i]->transfer_buffer_length);
+        printk(KERN_WARNING "===usbcam_READ:transfer_dma: %lu\n", cam_dev->myUrb[i]->transfer_dma);
         if(cam_dev->myUrb[i]->transfer_buffer == NULL)
-            printk(KERN_WARNING "===usbcam_read:transfer_buffer is NULL!\n");
+            printk(KERN_WARNING "===usbcam_READ:transfer_buffer is NULL!\n");
         else
-            printk(KERN_WARNING "===usbcam_read:transfer_buffer is NOT NULL!\n");
-        printk(KERN_WARNING "===usbcam_read:=====================\n");
+            printk(KERN_WARNING "===usbcam_READ:transfer_buffer is NOT NULL!\n");
+        printk(KERN_WARNING "===usbcam_READ:=====================\n");
 
-        printk(KERN_WARNING "===usbcam_read: Killing URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_READ: Killing URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         usb_kill_urb(cam_dev->myUrb[i]);
 
-        printk(KERN_WARNING "===usbcam_read: USB_FREE_COHERENT (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_READ: USB_FREE_COHERENT (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         // free urb buffer, really unsure about this..
         usb_free_coherent(cam_dev->usbdev, cam_dev->myUrb[i]->transfer_buffer_length, cam_dev->myUrb[i]->transfer_buffer, cam_dev->myUrb[i]->transfer_dma);
 
-        printk(KERN_WARNING "===usbcam_read: USB_FREE_URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_READ: USB_FREE_URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         // free urb struct
         usb_free_urb(cam_dev->myUrb[i]);
+
+        // debugging some weird issue with usb_free_urb
+        cam_dev->myUrb[i] = NULL;
         if(cam_dev->myUrb[i] != NULL)
-            printk(KERN_WARNING "===usbcam_read: URB not freed properly!\n");
+            printk(KERN_WARNING "===usbcam_READ: URB not freed properly!\n");
         else
-            printk(KERN_WARNING "===usbcam_read: URB freed!\n");
+            printk(KERN_WARNING "===usbcam_READ: URB freed!\n");
     }
     return bytes_copied;
 }
@@ -283,7 +285,7 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 }
 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
-    printk(KERN_WARNING "===usbcam_ioctl: entering IOCTL function\n");
+    printk(KERN_WARNING "===usbcam_IOCTL: entering IOCTL function\n");
     char cam_pos[4];
     int retcode;
     int pantilt = 0x03;
@@ -320,13 +322,13 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                                 2,
                                 0);
                 if(retcode < 0) {
-                    printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_GET! code %i\n", retcode);
+                    printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_GET! code %i\n", retcode);
                     return retcode;
                 }
                 break;
             }
             else{
-                printk(KERN_WARNING "===usbcam_ioctl_get: ERROR arg is invalid! %s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
+                printk(KERN_WARNING "===usbcam_IOCTL_get: ERROR arg is invalid! %s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
                 return -EFAULT;
             }
 
@@ -342,14 +344,14 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             2,
                             0);
             if(retcode < 0) {
-                printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_SET! code %i\n", retcode);
+                printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_SET! code %i\n", retcode);
                 return retcode;
                 }
             break;
 
         case IOCTL_STREAMON:
-            printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_STREAMON\n");
-            printk(KERN_WARNING "===usbcam_ioctl: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_STREAMON\n");
+            printk(KERN_WARNING "===usbcam_IOCTL: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             retcode = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x0B,
@@ -360,13 +362,13 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0,
                             0);
             if(retcode < 0) {
-                printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
+                printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
                 return retcode;
             }
             break;
 
         case IOCTL_STREAMOFF:
-            printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_STREAMOFF\n");
+            printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_STREAMOFF\n");
             retcode = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x0B,
@@ -377,13 +379,13 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             0,
                             0);
             if(retcode < 0) {
-                printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", retcode);
+                printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", retcode);
                 return retcode;
             }
             break;
 
         case IOCTL_GRAB:
-            printk(KERN_WARNING "===usbcam_ioctl: Entering IOCTL_GRAB\n");
+            printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_GRAB\n");
             urbInit(intf, cam_dev->usbdev);
             break;
 
@@ -433,7 +435,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             4,
                             0);
             if(retcode < 0) {
-                printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT! code %i\n", retcode);
+                printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT! code %i\n", retcode);
                 return retcode;
             }
             break;
@@ -449,7 +451,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             1,
                             0);
             if(retcode < 0) {
-                printk(KERN_WARNING "===usbcam_ioctl: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", retcode);
+                printk(KERN_WARNING "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", retcode);
                 return retcode;
             }
             break;
@@ -487,20 +489,20 @@ int urbInit(struct usb_interface *intf, struct usb_device *dev) {
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
     size = myPacketSize * nbPackets;
     nbUrbs = 5;
-    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint address %d\n", endpointDesc.bEndpointAddress);
-    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint packet size %d\n", myPacketSize);
-    printk(KERN_WARNING "===usbcam_urbinit_datacheck: Endpoint interval %d\n", endpointDesc.bInterval);
-    printk(KERN_WARNING "===usbcam_urbinit_datacheck: URB Pipe value is %d\n", usb_rcvisocpipe(cam_dev->usbdev, endpointDesc.bEndpointAddress));
-    printk(KERN_WARNING "===usbcam_urbinit_datacheck: URB transfer flag is %d\n", URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP);
-    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    printk(KERN_WARNING "===usbcam_URBINIT_datacheck: Endpoint address %d\n", endpointDesc.bEndpointAddress);
+    printk(KERN_WARNING "===usbcam_URBINIT_datacheck: Endpoint packet size %d\n", myPacketSize);
+    printk(KERN_WARNING "===usbcam_URBINIT_datacheck: Endpoint interval %d\n", endpointDesc.bInterval);
+    printk(KERN_WARNING "===usbcam_URBINIT_datacheck: URB Pipe value is %d\n", usb_rcvisocpipe(cam_dev->usbdev, endpointDesc.bEndpointAddress));
+    printk(KERN_WARNING "===usbcam_URBINIT_datacheck: URB transfer flag is %d\n", URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP);
+    printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     for (i = 0; i < nbUrbs; i++) {
 
         //if(cam_dev->myUrb[i] != NULL)
         usb_free_urb(cam_dev->myUrb[i]);
-        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         cam_dev->myUrb[i] = usb_alloc_urb(nbPackets, GFP_ATOMIC);
-        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         if (cam_dev->myUrb[i] == NULL) {
             printk(KERN_WARNING "===usbcam_urbInit: ERROR allocating memory for urb!\n");
             return -ENOMEM;
@@ -508,15 +510,15 @@ int urbInit(struct usb_interface *intf, struct usb_device *dev) {
 
         // NOTE: usb_buffer_alloc renamed to usb_alloc_coherent
         // see linux commit 073900a28d95c75a706bf40ebf092ea048c7b236
-        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         cam_dev->myUrb[i]->transfer_buffer = usb_alloc_coherent(cam_dev->usbdev, size, GFP_KERNEL, &cam_dev->myUrb[i]->transfer_dma);
-        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+        printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
         if (cam_dev->myUrb[i]->transfer_buffer == NULL) {
-            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             printk(KERN_WARNING "===usbcam_urbInit: ERROR allocating memory for transfer buffer!\n");
             usb_free_urb(cam_dev->myUrb[i]);
-            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             return -ENOMEM;
         }
 
@@ -532,45 +534,45 @@ int urbInit(struct usb_interface *intf, struct usb_device *dev) {
         cam_dev->myUrb[i]->transfer_buffer_length = size;
 
         for (j = 0; j < nbPackets; ++j) {
-            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
             cam_dev->myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
             cam_dev->myUrb[i]->iso_frame_desc[j].length = myPacketSize;
         }
         printk(KERN_WARNING "=================\n");
-        printk(KERN_WARNING "===usbcam_urbinit: URB# %d pipe value is %d\n", i, cam_dev->myUrb[i]->pipe);
-        printk(KERN_WARNING "===usbcam_urbinit: URB# %d transfer flags are %d\n", i, cam_dev->myUrb[i]->transfer_flags);
-        printk(KERN_WARNING "===usbcam_urbinit: URB# %d number of packets is %d\n", i, cam_dev->myUrb[i]->number_of_packets);
-        printk(KERN_WARNING "===usbcam_urbinit: URB# %d transfer_buffer_length is %d\n", i, cam_dev->myUrb[i]->transfer_buffer_length);
-        printk(KERN_WARNING "===usbcam_urbinit: URB# %d interval is %d\n", i, cam_dev->myUrb[i]->interval);
+        printk(KERN_WARNING "===usbcam_URBINIT: URB# %d pipe value is %d\n", i, cam_dev->myUrb[i]->pipe);
+        printk(KERN_WARNING "===usbcam_URBINIT: URB# %d transfer flags are %d\n", i, cam_dev->myUrb[i]->transfer_flags);
+        printk(KERN_WARNING "===usbcam_URBINIT: URB# %d number of packets is %d\n", i, cam_dev->myUrb[i]->number_of_packets);
+        printk(KERN_WARNING "===usbcam_URBINIT: URB# %d transfer_buffer_length is %d\n", i, cam_dev->myUrb[i]->transfer_buffer_length);
+        printk(KERN_WARNING "===usbcam_URBINIT: URB# %d interval is %d\n", i, cam_dev->myUrb[i]->interval);
 
+/*        ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
+
+        printk(KERN_WARNING "===usbcam_URBINIT: SUBMIT URB VALUE is %d\n", ret);
+
+        if (ret < 0) {
+            printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
+            return ret;
+        }
+        printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+*/
+    }
+
+    printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+    for(i = 0; i < nbUrbs; i++) {
+        printk(KERN_WARNING "===usbcam_URBINIT: usb_submit_urb is after this (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
 
-        printk(KERN_WARNING "===usbcam_urbinit: SUBMIT URB VALUE is %d\n", ret);
+        printk(KERN_WARNING "===usbcam_URBINIT: SUBMIT URB VALUE is %d\n", ret);
 
         if (ret < 0) {
-            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-            printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
+            printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            printk(KERN_WARNING "===usbcam_URBINIT: ERROR submitting URB: %i\n", ret);
             return ret;
         }
-        printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-
+        //printk(KERN_WARNING "===usbcam_URBINIT: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
     }
-/*
-    printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-    for(i = 0; i < nbUrbs; i++) {
-        printk(KERN_WARNING "===usbcam_urbinit: usb_submit_urb is after this (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        //ret = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
 
-        //printk(KERN_WARNING "===usbcam_urbinit: SUBMIT URB VALUE is %d\n", ret);
-
-        if (ret < 0) {
-            printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-            printk(KERN_WARNING "===usbcam_urbInit: ERROR submitting URB: %i\n", ret);
-            return ret;
-        }
-        //printk(KERN_WARNING "===usbcam_urbinit: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-    }
-    */
     return 0;
 }
 
@@ -625,7 +627,7 @@ static void urbCompletionCallback(struct urb *urb) {
 
         if (!(myStatus == 1)) {
             if ((ret = usb_submit_urb(urb, GFP_ATOMIC)) < 0) {
-                printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR submitting URB: %i\n", ret);
+                printk(KERN_WARNING "===usbcam_CALLBACK: ERROR submitting URB: %i\n", ret);
             }
         }
 
@@ -652,6 +654,6 @@ static void urbCompletionCallback(struct urb *urb) {
         }
     }
     else {
-        printk(KERN_WARNING "===usbcam_urbCompletionCallback: ERROR completing urb: %i\n", urb->status);
+        printk(KERN_WARNING "===usbcam_CALLBACK: ERROR completing urb: %i\n", urb->status);
     }
 }
