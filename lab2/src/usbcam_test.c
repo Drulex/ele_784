@@ -51,15 +51,15 @@ int main(int argc, char *argv[]) {
 	int max = atoi(argv[2]);
 	long ioctl_return;
 
-	inBuffer = malloc((USBCAM_BUF_SIZE) * sizeof(unsigned char));
-	finalBuffer = malloc((USBCAM_BUF_SIZE * 2) * sizeof(unsigned char));
+	inBuffer = malloc(USBCAM_BUF_SIZE);
+	finalBuffer = malloc(USBCAM_BUF_SIZE * 2);
 
     if((!inBuffer) || (!finalBuffer)) {
 		printf("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
 		return -1;
 	}
 
-
+/*
     // flush both buffers
     for(i=0; i<USBCAM_BUF_SIZE; i++) {
         inBuffer[i] = '\0';
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     for(i=USBCAM_BUF_SIZE; i<2*USBCAM_BUF_SIZE; i++) {
         finalBuffer[i] = '\0';
     }
-
+*/
 	foutput = fopen(USBCAM_IMAGE, "wb"); // #1
 	if(foutput != NULL) {
 
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
 
 		//sleep(1);
 
-        mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
+        mySize = read(fd, inBuffer, USBCAM_BUF_SIZE); // #4
         printf("Bytes copied from cam: %u\n", mySize);
 
 		if(mySize < 0) {

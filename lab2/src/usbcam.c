@@ -255,6 +255,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
 
     // copy data to user space
     printk(KERN_WARNING "===usbcam_READ: COPY TO USER\n");
+    printk(KERN_WARNING "===usbcam_READ: myLength=%u\n", myLengthUsed);
     bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
     printk(KERN_WARNING "===usbcam_READ: data copied to user:\n");
 //    for(i=0; i<myLengthUsed; i++){
@@ -266,7 +267,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
         printk(KERN_ERR "===usbcam_READ: ERROR while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
         return -EFAULT;
     }
-    printk(KERN_WARNING "===usbcam_READ: copied %u bytes to user", bytes_copied);
+    printk(KERN_WARNING "===usbcam_READ: copied %u bytes to user", myLengthUsed - bytes_copied);
 
     // destroy all URB
     for(i=0; i<5; i++) {
@@ -298,7 +299,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
         else
             printk(KERN_WARNING "===usbcam_READ: URB freed!\n");
     }
-    return bytes_copied;
+    return myLengthUsed - bytes_copied;
 }
 
 ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
