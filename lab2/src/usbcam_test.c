@@ -165,13 +165,8 @@ int main(int argc, char *argv[]) {
 		//sleep(1);
 
         if(inBuffer == NULL)
-            printf("ERROR: inBuffer is NULL!!");
+            printf("ERROR: inBuffer is NULL!!\n");
 
-        printf("Contents of inbuffer:\n");
-        for(i=0; i<USBCAM_BUF_SIZE; i++){
-            printf("%c", &inBuffer[i]);
-        }
-        printf("\n");
 		// #6
         printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         memcpy(finalBuffer, inBuffer, HEADERFRAME1);
