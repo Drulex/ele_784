@@ -180,6 +180,9 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
             //cam_dev->myUrb[i] = NULL);
             usb_free_urb(cam_dev->myUrb[i]);
         }
+        for(i=0; i<42666; i++) {
+            myData[i] = '\0';
+        }
 
         usb_set_interface(cam_dev->usbdev, 1, 4);
         return 0;
@@ -232,7 +235,7 @@ int usbcam_release (struct inode *inode, struct file *filp) {
 
 ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
     int i;
-    int bytes_copied = 0;
+    unsigned int bytes_copied = 0;
     struct usb_interface *intf;
     struct USBCam_Dev *cam_dev;
     intf = filp->private_data;
@@ -263,6 +266,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
         printk(KERN_ERR "===usbcam_READ: ERROR while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
         return -EFAULT;
     }
+    printk(KERN_WARNING "===usbcam_READ: copied %u bytes to user", bytes_copied);
 
     // destroy all URB
     for(i=0; i<5; i++) {
