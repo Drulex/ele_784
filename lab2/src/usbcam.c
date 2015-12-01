@@ -131,14 +131,6 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     int retnum;
     struct USBCam_Dev *cam_dev = NULL;
 
-	// Allocate memory to local driver structure
-    cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
-
-    if(!cam_dev)
-        printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-
-    cam_dev->usbdev = usb_get_dev(dev);
-    cam_dev->active_interface = -1;
     interface = &intf->altsetting[0];
 
     if(interface->desc.bInterfaceClass == CC_VIDEO) {
@@ -146,44 +138,39 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
             printk(KERN_WARNING "===usbcam_PROBE: FOUND INTERFACE!\n");
             return 0;
         }
+
         if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
             printk(KERN_WARNING "===usbcam_PROBE: Found proper Interface Subclass\n");
-            cam_dev->active_interface = 1;
+
+            // Allocate memory to local driver structure
+            cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
+            if(!cam_dev)
+                printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+
+            cam_dev->usbdev = usb_get_dev(dev);
+
+            // associate cam_dev to interface selected
+            usb_set_intfdata (intf, cam_dev);
+            retnum = usb_register_dev(intf, &usbcam_class);
+            if(retnum < 0)
+                printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
+            else
+                printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
+            usb_set_interface(cam_dev->usbdev, 1, 4);
+
+            // initialize access protection variables and such
+            sema_init(&cam_dev->sem_read, 0);
+            sema_init(&cam_dev->sem_grab, 0);
+            cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
+            cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
+            init_completion(cam_dev->urb_done);
+            printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
         }
         else
             return -1;// end subclass check if
     }
     else
         return -1;// end class check if
-
-    printk(KERN_WARNING "===usbcam_PROBE: Done detecting Interface(s)\n");
-
-    if(cam_dev->active_interface != -1) {
-
-        // associate cam_dev to interface selected
-        usb_set_intfdata (intf, cam_dev);
-        retnum = usb_register_dev(intf, &usbcam_class);
-        if(retnum < 0)
-            printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
-        else
-            printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
-        usb_set_interface(cam_dev->usbdev, 1, 4);
-
-        // initialize access protection variables and such
-        sema_init(&cam_dev->sem_read, 0);
-        sema_init(&cam_dev->sem_grab, 0);
-        cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
-        cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
-        init_completion(cam_dev->urb_done);
-        printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
-
-        return 0;
-    }
-    else{
-        printk(KERN_WARNING "===usbcam_PROBE: could not associate interface to device\n");
-        return -1;
-    }
-
 }
 
 void usbcam_disconnect(struct usb_interface *intf) {
@@ -249,9 +236,9 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     printk(KERN_WARNING "===usbcam_READ: COPY TO USER\n");
     bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
     printk(KERN_WARNING "===usbcam_READ: data copied to user:\n");
-    for(i=0; i<myLengthUsed; i++){
-        printk(KERN_WARNING "%c", myData[i]);
-    }
+//    for(i=0; i<myLengthUsed; i++){
+//        printk(KERN_WARNING "%c", &myData[i]);
+//    }
 
     // in case something went wrong
     if(bytes_copied < 0) {

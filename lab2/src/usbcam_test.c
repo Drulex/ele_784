@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-        sleep(2);
+        sleep(4);
 
 		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
 		if(ioctl_return >= 0)
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 
-		sleep(2);
+		sleep(4);
 
         mySize = read(fd, &inBuffer, USBCAM_BUF_SIZE); // #4
         printf("Bytes copied from cam: %u\n", mySize);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 			printf("READ ERROR: %u\n", mySize);
 			return -1;
 		}
-		sleep(2);
+		sleep(4);
 
 		ioctl_return = ioctl(fd, IOCTL_STREAMOFF); // #5
 		if(ioctl_return >= 0)
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
 			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-		sleep(2);
+		sleep(4);
 
         if(inBuffer == NULL)
             printf("ERROR: inBuffer is NULL!!");
