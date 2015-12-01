@@ -130,7 +130,6 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
     struct usb_device *dev = interface_to_usbdev(intf);
     int retnum, i;
     int active_interface = -1;
-    struct USBCam_Dev *cam_dev = NULL;
 
 	interface = &intf->altsetting[0];
 
@@ -151,10 +150,11 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
     printk(KERN_WARNING "===usbcam_PROBE: Done detecting Interface(s)\n");
 
-    if(active_interface != -1) {
+    if(active_interface == 1) {
+        struct USBCam_Dev *cam_dev = NULL;
         printk(KERN_WARNING "===usbcam_PROBE: Active interface found\n");
         // Allocate memory to local driver structure
-        cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
+        cam_dev = (struct USBCam_Dev*) kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
 
         if(!cam_dev)
             printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
@@ -177,8 +177,8 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         init_completion(cam_dev->urb_done);
         printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
         for(i=0; i<5; i++) {
-            //cam_dev->myUrb[i] = NULL);
-            usb_free_urb(cam_dev->myUrb[i]);
+            cam_dev->myUrb[i] = NULL;
+            //usb_free_urb(cam_dev->myUrb[i]);
         }
         for(i=0; i<42666; i++) {
             myData[i] = '\0';
