@@ -52,20 +52,9 @@ static long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg
 module_init(usbcam_init);
 module_exit(usbcam_exit);
 
-// Private function prototypes
-static int urbInit(struct usb_interface *intf, struct usb_device *dev);
-static void urbCompletionCallback(struct urb *urb);
-
-// global vars
-static unsigned int myStatus = 0;
-static unsigned int myLength = 42666;
-static unsigned int myLengthUsed = 0;
-static char myData[42666];
-
 // General data structure for driver
 struct USBCam_Dev {
     struct usb_device *usbdev;
-    int active_interface;
     struct usb_interface *usbcam_interface;
     struct urb *myUrb[5];
     struct semaphore sem_read;
@@ -73,6 +62,17 @@ struct USBCam_Dev {
     struct completion *urb_done;
     atomic_t urbCounter;
 };
+
+
+// Private function prototypes
+static int urbInit(struct usb_interface *intf, struct USBCam_Dev *cam_dev);
+static void urbCompletionCallback(struct urb *urb);
+
+// global vars
+static unsigned int myStatus = 0;
+static unsigned int myLength = 42666;
+static unsigned int myLengthUsed = 0;
+static char myData[42666];
 
 
 static struct usb_device_id usbcam_table[] = {
@@ -128,49 +128,67 @@ static void __exit usbcam_exit(void) {
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
     const struct usb_host_interface *interface;
     struct usb_device *dev = interface_to_usbdev(intf);
-    int retnum;
+    int retnum, i;
+    int active_interface = -1;
     struct USBCam_Dev *cam_dev = NULL;
 
-    interface = &intf->altsetting[0];
+	interface = &intf->altsetting[0];
 
     if(interface->desc.bInterfaceClass == CC_VIDEO) {
         if(interface->desc.bInterfaceSubClass == SC_VIDEOCONTROL) {
             printk(KERN_WARNING "===usbcam_PROBE: FOUND INTERFACE!\n");
             return 0;
         }
-
         if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
             printk(KERN_WARNING "===usbcam_PROBE: Found proper Interface Subclass\n");
-
-            // Allocate memory to local driver structure
-            cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
-            if(!cam_dev)
-                printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-
-            cam_dev->usbdev = usb_get_dev(dev);
-
-            // associate cam_dev to interface selected
-            usb_set_intfdata (intf, cam_dev);
-            retnum = usb_register_dev(intf, &usbcam_class);
-            if(retnum < 0)
-                printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
-            else
-                printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
-            usb_set_interface(cam_dev->usbdev, 1, 4);
-
-            // initialize access protection variables and such
-            sema_init(&cam_dev->sem_read, 0);
-            sema_init(&cam_dev->sem_grab, 0);
-            cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
-            cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
-            init_completion(cam_dev->urb_done);
-            printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
+            active_interface = 1;
         }
         else
             return -1;// end subclass check if
     }
     else
         return -1;// end class check if
+
+    printk(KERN_WARNING "===usbcam_PROBE: Done detecting Interface(s)\n");
+
+    if(active_interface != -1) {
+        printk(KERN_WARNING "===usbcam_PROBE: Active interface found\n");
+        // Allocate memory to local driver structure
+        cam_dev = kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
+
+        if(!cam_dev)
+            printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+
+        cam_dev->usbdev = usb_get_dev(dev);
+        // associate cam_dev to interface selected
+        usb_set_intfdata (intf, cam_dev);
+
+        retnum = usb_register_dev(intf, &usbcam_class);
+        if(retnum < 0)
+            printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
+        else
+            printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
+
+        // initialize access protection variables and such
+        sema_init(&cam_dev->sem_read, 0);
+        sema_init(&cam_dev->sem_grab, 0);
+        cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
+        cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
+        init_completion(cam_dev->urb_done);
+        printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
+        for(i=0; i<5; i++) {
+            //cam_dev->myUrb[i] = NULL);
+            usb_free_urb(cam_dev->myUrb[i]);
+        }
+
+        usb_set_interface(cam_dev->usbdev, 1, 4);
+        return 0;
+    }
+    else{
+        printk(KERN_WARNING "===usbcam_PROBE: could not associate interface to device\n");
+        return -1;
+    }
+
 }
 
 void usbcam_disconnect(struct usb_interface *intf) {
@@ -237,7 +255,7 @@ ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t 
     bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
     printk(KERN_WARNING "===usbcam_READ: data copied to user:\n");
 //    for(i=0; i<myLengthUsed; i++){
-//        printk(KERN_WARNING "%c", &myData[i]);
+//        printk(KERN_WARNING "%c", myData[i]);
 //    }
 
     // in case something went wrong
@@ -390,7 +408,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                 printk(KERN_WARNING "===usbcam_IOCTL: sem_grab not available. Exiting!\n");
                 return -ENOEXEC;
             }
-            urbInit(intf, cam_dev->usbdev);
+            urbInit(intf, cam_dev);
             // release sem_read
             up(&cam_dev->sem_read);
             break;
@@ -473,23 +491,17 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 // **** Private functions **** //
 // *************************** //
 
-int urbInit(struct usb_interface *intf, struct usb_device *dev) {
+int urbInit(struct usb_interface *intf, struct USBCam_Dev *cam_dev) {
 
     unsigned int i, j, ret, nbPackets, myPacketSize, size, nbUrbs;
     //struct usb_device *dev = usb_get_intfdata(intf);
 
     struct usb_host_interface *cur_altsetting;
     struct usb_endpoint_descriptor endpointDesc;
-    struct USBCam_Dev *cam_dev;
     myStatus = 0;
     myLengthUsed = 0;
     cur_altsetting = intf->cur_altsetting;
     endpointDesc = cur_altsetting->endpoint[0].desc;
-
-    cam_dev = usb_get_intfdata(intf);
-
-    //cur_altsetting = intf->cur_altsetting;
-    //endpointDesc = cur_altsetting->endpoint[0].desc;
 
     nbPackets = 40;  // The number of isochronous packets this urb should contain
     myPacketSize = le16_to_cpu(endpointDesc.wMaxPacketSize);
