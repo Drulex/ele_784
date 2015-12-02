@@ -537,11 +537,9 @@ static void urbCompletionCallback(struct urb *urb) {
     unsigned int nbytes;
     void * mem;
     struct USBCam_Dev *cam_dev;
-    printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
     cam_dev = urb->context;
     if(urb->status == 0) {
-
         for (i = 0; i < urb->number_of_packets; ++i) {
             if(myStatus == 1) {
                 continue;
@@ -583,16 +581,17 @@ static void urbCompletionCallback(struct urb *urb) {
         }
 
         else {
-            // should this be here?
+            // possibly redundant
             myStatus = 0;
 
-            printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-            atomic_inc(&cam_dev->urbCounter); // increment counter +1
+            // increment urbCounter
+            atomic_inc(&cam_dev->urbCounter);
+
             urbCounterTotal = (int) atomic_read(&cam_dev->urbCounter);
             if(urbCounterTotal == 5) {
-                printk(KERN_WARNING "===usbcam_CALLBACK: (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
                 // reset urbCounter
                 atomic_set(&cam_dev->urbCounter, 0);
+
                 // mark urb complete
                 complete(cam_dev->urb_done);
             }
