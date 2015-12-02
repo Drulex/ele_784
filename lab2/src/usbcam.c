@@ -249,71 +249,45 @@ int usbcam_release (struct inode *inode, struct file *filp) {
 
 ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
     int i;
-    unsigned int bytes_copied = 0;
     struct usb_interface *intf;
     struct USBCam_Dev *cam_dev;
+    unsigned int bytes_missed = 0;
+
+    // get interface from private_data
     intf = filp->private_data;
     cam_dev = usb_get_intfdata(intf);
 
-    if (down_trylock(&cam_dev->sem_read)) {
+    // try to acquire semaphore without blocking
+    if(down_trylock(&cam_dev->sem_read)) {
         printk(KERN_ERR "===usbcam_READ: sem_read not available! Exiting!\n");
-        return -ENOEXEC;
+        return -EBUSY;
     }
 
     // wait for callback to be done
-    // perhaps perform some access protection as well?
     printk(KERN_WARNING "===usbcam_READ: Waiting for urb callback completion...\n");
     wait_for_completion(cam_dev->urb_done);
     printk(KERN_WARNING "===usbcam_READ: Completion done!\n");
 
-
     // copy data to user space
-    printk(KERN_WARNING "===usbcam_READ: COPY TO USER\n");
-    printk(KERN_WARNING "===usbcam_READ: myLength=%u\n", myLengthUsed);
-    bytes_copied = copy_to_user(ubuf, myData, myLengthUsed);
-    printk(KERN_WARNING "===usbcam_READ: data copied to user:\n");
-//    for(i=0; i<myLengthUsed; i++){
-//        printk(KERN_WARNING "%c", myData[i]);
-//    }
-
-    // in case something went wrong
-    if(bytes_copied < 0) {
-        printk(KERN_ERR "===usbcam_READ: ERROR while copying data from kernel space(%s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
-        return -EFAULT;
-    }
-    printk(KERN_WARNING "===usbcam_READ: copied %u bytes to user", myLengthUsed - bytes_copied);
+    bytes_missed = copy_to_user(ubuf, myData, myLengthUsed);
 
     // destroy all URB
     for(i=0; i<5; i++) {
-        printk(KERN_WARNING "===usbcam_READ:=====================\n");
-        printk(KERN_WARNING "===usbcam_READ:INFO ON URB ABOUT TO BE DESTROYED\n");
-        printk(KERN_WARNING "===usbcam_READ:transfer_buffer_length: %u\n", cam_dev->myUrb[i]->transfer_buffer_length);
-        printk(KERN_WARNING "===usbcam_READ:transfer_dma: %lu\n", cam_dev->myUrb[i]->transfer_dma);
-        if(cam_dev->myUrb[i]->transfer_buffer == NULL)
-            printk(KERN_WARNING "===usbcam_READ:transfer_buffer is NULL!\n");
-        else
-            printk(KERN_WARNING "===usbcam_READ:transfer_buffer is NOT NULL!\n");
-        printk(KERN_WARNING "===usbcam_READ:=====================\n");
-
         printk(KERN_WARNING "===usbcam_READ: Killing URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         usb_kill_urb(cam_dev->myUrb[i]);
 
         printk(KERN_WARNING "===usbcam_READ: USB_FREE_COHERENT (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        // free urb buffer, really unsure about this..
         usb_free_coherent(cam_dev->usbdev, cam_dev->myUrb[i]->transfer_buffer_length, cam_dev->myUrb[i]->transfer_buffer, cam_dev->myUrb[i]->transfer_dma);
 
         printk(KERN_WARNING "===usbcam_READ: USB_FREE_URB (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
-        // free urb struct
         usb_free_urb(cam_dev->myUrb[i]);
 
         // debugging some weird issue with usb_free_urb
         cam_dev->myUrb[i] = NULL;
-        if(cam_dev->myUrb[i] != NULL)
-            printk(KERN_WARNING "===usbcam_READ: URB not freed properly!\n");
-        else
-            printk(KERN_WARNING "===usbcam_READ: URB freed!\n");
     }
-    return myLengthUsed - bytes_copied;
+
+    // return actual number of bytes copied to user space
+    return myLengthUsed - bytes_missed;
 }
 
 ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, loff_t *f_ops) {
