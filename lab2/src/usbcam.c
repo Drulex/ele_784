@@ -389,6 +389,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
             break;
 
         case IOCTL_PANTILT:
+            printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_PANTILT\n");
             // fill cam_pos array based on user provided position
             switch(arg) {
                 // UP

@@ -32,7 +32,7 @@
 #define USBCAM_BUF_SIZE		42666
 
 #define CLEAR_TERM  printf("\033[2J\033[1;1H")
-#define PANTILT_MAX 40
+#define PANTILT_MAX 35
 
 // function prototypes
 int menu(void);
@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=UP, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 0);
+                    sleep(0.1);
 			    }
                 sleep(1);
                 break;
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=DOWN, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 1);
+                    sleep(0.1);
 			    }
                 sleep(1);
                 break;
@@ -81,6 +83,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=LEFT, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 2);
+                    sleep(0.1);
 			    }
                 sleep(1);
                 break;
@@ -89,6 +92,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=RIGHT, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 3);
+                    sleep(0.1);
 			    }
                 sleep(1);
                 break;
