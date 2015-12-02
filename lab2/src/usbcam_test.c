@@ -31,160 +31,182 @@
 #define USBCAM_DEVICE 		"/dev/usbcam1"
 #define USBCAM_BUF_SIZE		42666
 
-int main(int argc, char *argv[]) {
-	/*if(!argv[1] || !argv[2]){
-		printf("ERROR: Unable to parse arguments!. Please provide arguments as shown below:\n");
-		printf("./usbcam_test 'direction' 'value'\n");
-		printf("Example: ./usbcam_test down 10\n");
-		printf("To call reset provide value of 0\n");
-		printf("Example: ./usbcam_test reset 0\n");
-		printf("Now exiting\n");
-		return -1;
-	}*/
+#define CLEAR_TERM  printf("\033[2J\033[1;1H")
+#define PANTILT_MAX 40
 
-	FILE *foutput;
+// function prototypes
+int menu(void);
+int capture_image(int fd);
+
+int main(int argc, char *argv[]) {
 	static int fd;
+    int cmd, i;
+
+
+    // open driver in READONLY
+	fd = open(USBCAM_DEVICE, O_RDONLY);
+
+    if(fd <= 0){
+        printf("ERROR OPENING USB DEVICE!\n NOW EXITING\n");
+        return -1;
+    }
+
+    printf("USB DEVICE successfully openened in O_RDONLY\n");
+
+    while(cmd != 7) {
+        cmd = menu();
+        switch(cmd) {
+
+            case 1:
+                capture_image(fd);
+                break;
+
+            case 2:
+                printf("PANTILT: DIR=UP, VALUE=%i\n", PANTILT_MAX);
+			    for(i=0; i<PANTILT_MAX; i++) {
+					ioctl(fd, IOCTL_PANTILT, 0);
+			    }
+                sleep(1);
+                break;
+
+            case 3:
+                printf("PANTILT: DIR=DOWN, VALUE=%i\n", PANTILT_MAX);
+			    for(i=0; i<PANTILT_MAX; i++) {
+					ioctl(fd, IOCTL_PANTILT, 1);
+			    }
+                sleep(1);
+                break;
+
+            case 4:
+                printf("PANTILT: DIR=LEFT, VALUE=%i\n", PANTILT_MAX);
+			    for(i=0; i<PANTILT_MAX; i++) {
+					ioctl(fd, IOCTL_PANTILT, 2);
+			    }
+                sleep(1);
+                break;
+
+            case 5:
+                printf("PANTILT: DIR=RIGHT, VALUE=%i\n", PANTILT_MAX);
+			    for(i=0; i<PANTILT_MAX; i++) {
+					ioctl(fd, IOCTL_PANTILT, 3);
+			    }
+                sleep(1);
+                break;
+
+            case 6:
+                printf("PANTILT RESET\n");
+				ioctl(fd, IOCTL_PANTILT_RESET);
+                sleep(1);
+                break;
+    	}
+    }
+    printf("CLOSING USB DEVICE\n");
+	close(fd);
+	return 0;
+}
+
+int menu(void){
+    CLEAR_TERM;
+    int cmd;
+    cmd = 0;
+    printf("=======================\n");
+    printf("usbcam test application\n");
+    printf("=======================\n\n");
+    printf("Choose a command to perform\n");
+    printf("1. Capture an image\n");
+    printf("2. PANTILT UP\n");
+    printf("3. PANTILT DOWN\n");
+    printf("4. PANTILT LEFT\n");
+    printf("5. PANTILT RIGHT\n");
+    printf("6. PANTILT RESET\n");
+    printf("7. Exit\n");
+    scanf("%d", &cmd);
+    CLEAR_TERM;
+    return cmd;
+}
+
+int capture_image(int fd){
 	unsigned char *inBuffer;
 	unsigned char *finalBuffer;
 	unsigned int mySize;
-	int i = 0;
-	int max = atoi(argv[2]);
+	FILE *foutput;
 	long ioctl_return;
+	int i = 0;
 
-	inBuffer = malloc(USBCAM_BUF_SIZE);
-	finalBuffer = malloc(USBCAM_BUF_SIZE * 2);
+    // allocate memory to buffers
+    inBuffer = (unsigned char *) malloc(USBCAM_BUF_SIZE);
+	finalBuffer = (unsigned char *) malloc(USBCAM_BUF_SIZE * 2);
 
     if((!inBuffer) || (!finalBuffer)) {
 		printf("Unable to allocate memory for inBuffer or finalBuffer (%s,%s,%u)\n", __FILE__, __FUNCTION__, __LINE__);
 		return -1;
 	}
 
-/*
-    // flush both buffers
-    for(i=0; i<USBCAM_BUF_SIZE; i++) {
-        inBuffer[i] = '\0';
-        finalBuffer[i] = '\0';
-    }
+    // open jpg file for image
+	foutput = fopen(USBCAM_IMAGE, "wb");
 
-    for(i=USBCAM_BUF_SIZE; i<2*USBCAM_BUF_SIZE; i++) {
-        finalBuffer[i] = '\0';
-    }
-*/
-	foutput = fopen(USBCAM_IMAGE, "wb"); // #1
-	if(foutput != NULL) {
+    if(foutput != NULL) {
 
-		// open driver in READONLY
-		fd = open(USBCAM_DEVICE, O_RDONLY);
-		if(fd >= 0)
-			printf("File descriptor OPEN\n");
-		else
-			printf("File descriptor ERROR: %d\n", fd);
-		/*
-		if(!strcmp(argv[1], "up")){
-			printf("PANTILT: DIR=UP, VALUE=%i\n", max);
-			for(i=0; i<max; i++){
-					ioctl(fd, IOCTL_PANTILT, 0);
-			}
-			sleep(1);
-		}
+        // streamon
+    	ioctl_return = ioctl(fd, IOCTL_STREAMON);
 
-		else if(!strcmp(argv[1], "down")){
-			printf("PANTILT: DIR=DOWN, VALUE=%i\n", max);
-			for(i=0; i<max; i++){
-					ioctl(fd, IOCTL_PANTILT, 1);
-			}
-			sleep(1);
-		}
-
-		else if(!strcmp(argv[1], "left")){
-			printf("PANTILT: DIR=LEFT, VALUE=%i\n", max);
-			for(i=0; i<max; i++){
-					ioctl(fd, IOCTL_PANTILT, 2);
-			}
-			sleep(1);
-		}
-
-		else if(!strcmp(argv[1], "right")){
-			printf("PANTILT: DIR=RIGHT, VALUE=%i\n", max);
-			for(i=0; i<max; i++){
-					ioctl(fd, IOCTL_PANTILT, 3);
-			}
-			sleep(1);
-		}
-
-		else if(!strcmp(argv[1], "reset")){
-			printf("PANTILT_RESET\n");
-			ioctl(fd, IOCTL_PANTILT_RESET);
-			sleep(1);
-		}
-
-		else{
-			printf("Command not recognized\n");
-			printf("Exiting\n");
-			close(fd);
-			free(finalBuffer);
-			free(inBuffer);
-			return -1;
-		}*/
-
-		ioctl_return = ioctl(fd, IOCTL_STREAMON); // #2
-		if(ioctl_return >= 0)
+        if(ioctl_return >= 0)
 			printf("IOCTL_STREAMON OK!\n");
 		else {
 			printf("IOCTL_STREAMON ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-        //sleep(1);
 
-		ioctl_return = ioctl(fd, IOCTL_GRAB); // #3
-		if(ioctl_return >= 0)
+        // grab
+		ioctl_return = ioctl(fd, IOCTL_GRAB);
+
+        if(ioctl_return >= 0)
 			printf("IOCTL_GRAB OK!\n");
 		else {
 			printf("IOCTL_GRAB ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
 
-		//sleep(1);
-
-        mySize = read(fd, inBuffer, USBCAM_BUF_SIZE); // #4
-        printf("Bytes copied from cam: %u\n", mySize);
+        // read
+        mySize = read(fd, inBuffer, USBCAM_BUF_SIZE);
 
 		if(mySize < 0) {
 			printf("READ ERROR: %u\n", mySize);
 			return -1;
 		}
-		//sleep(1);
 
-		ioctl_return = ioctl(fd, IOCTL_STREAMOFF); // #5
-		if(ioctl_return >= 0)
+        // streamoff
+        ioctl_return = ioctl(fd, IOCTL_STREAMOFF);
+
+        if(ioctl_return >= 0)
 			printf("IOCTL_STREAMOFF OK!\n");
 		else {
 			printf("IOCTL_STREAMOFF ERROR: %ld\n", ioctl_return);
 			return -1;
 		}
-		//sleep(1);
 
         if(inBuffer == NULL)
             printf("ERROR: inBuffer is NULL!!\n");
 
-		// #6
-        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
         memcpy(finalBuffer, inBuffer, HEADERFRAME1);
-        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 		memcpy(finalBuffer + HEADERFRAME1, dht_data, DHT_SIZE);
-        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 		memcpy(finalBuffer + HEADERFRAME1 + DHT_SIZE, inBuffer + HEADERFRAME1, (mySize - HEADERFRAME1));
-        printf("MEMCPY (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
 
-		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput); // #7*/
+		fwrite(finalBuffer, mySize + DHT_SIZE, 1, foutput);
+
+        printf("Photo captured!\n");
 		fclose(foutput); // #8
 
-	}
+        // free buffers
+        free(finalBuffer);
+        free(inBuffer);
+        sleep(3);
+    }
 
-	close(fd);
-	free(finalBuffer);
-	free(inBuffer);
+    else {
+        printf("Unable to img file for writing!\n");
+        return -1;
+    }
 
-	return 0;
-
+    return 0;
 }
