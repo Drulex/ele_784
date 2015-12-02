@@ -126,9 +126,11 @@ static void __exit usbcam_exit(void) {
 
 static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id *devid) {
     const struct usb_host_interface *interface;
+    int rv, i;
     struct usb_device *dev = interface_to_usbdev(intf);
-    int retnum, i;
-    int active_interface = -1;
+
+    // flag for subclass detection
+    int active_interface = 0;
 
 	interface = &intf->altsetting[0];
 
@@ -139,6 +141,7 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         }
         if(interface->desc.bInterfaceSubClass == SC_VIDEOSTREAMING) {
             printk(KERN_WARNING "===usbcam_PROBE: Found proper Interface Subclass\n");
+            // set flag to notify that subclass is found
             active_interface = 1;
         }
         else
@@ -149,22 +152,28 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
 
     printk(KERN_WARNING "===usbcam_PROBE: Done detecting Interface(s)\n");
 
-    if(active_interface == 1) {
-        struct USBCam_Dev *cam_dev = NULL;
+    if(active_interface) {
         printk(KERN_WARNING "===usbcam_PROBE: Active interface found\n");
-        // Allocate memory to local driver structure
+
+        struct USBCam_Dev *cam_dev = NULL;
         cam_dev = (struct USBCam_Dev*) kmalloc(sizeof(struct USBCam_Dev), GFP_KERNEL);
 
-        if(!cam_dev)
+        if(!cam_dev) {
             printk(KERN_WARNING "===usbcam_PROBE: Cannot allocate memory to USBCam_Dev (%s,%s,%u)\n",__FILE__,__FUNCTION__,__LINE__);
+            return -ENOMEM;
+        }
 
+        // increment reference count of usb device structure
         cam_dev->usbdev = usb_get_dev(dev);
+
         // associate cam_dev to interface selected
         usb_set_intfdata (intf, cam_dev);
+        rv = usb_register_dev(intf, &usbcam_class);
 
-        retnum = usb_register_dev(intf, &usbcam_class);
-        if(retnum < 0)
-            printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
+        if(rv < 0) {
+           printk(KERN_WARNING "===usbcam_PROBE: Error registering driver with USBCORE\n");
+           return -EINVAL;
+        }
         else
             printk(KERN_WARNING "===usbcam_PROBE: Registered driver with USBCORE\n");
 
@@ -175,19 +184,22 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
         open_count = (atomic_t) ATOMIC_INIT(0);
         init_completion(cam_dev->urb_done);
-        printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
 
+        // just to be sure
         for(i=0; i<5; i++) {
             cam_dev->myUrb[i] = NULL;
         }
+
+        // make altsetting current
         usb_set_interface(cam_dev->usbdev, 1, 4);
+
+        printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
         return 0;
     }
     else{
-        printk(KERN_WARNING "===usbcam_PROBE: could not associate interface to device\n");
-        return -1;
+        printk(KERN_WARNING "===usbcam_PROBE: Could not associate interface to device\n");
+        return -ENODEV;
     }
-
 }
 
 void usbcam_disconnect(struct usb_interface *intf) {
