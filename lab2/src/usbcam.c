@@ -31,9 +31,6 @@
 #include "dht_data.h"
 #include "usbcam.h"
 
-//#define THIS_MODULE 	"usbcam"
-//#define KBUILD_MODNAME	"ele784-lab2"
-
 // Module Information
 MODULE_AUTHOR("JORA Alexandru, MUKANDILA Mukandila");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -109,15 +106,16 @@ static struct usb_class_driver usbcam_class = {
 };
 
 static int __init usbcam_init(void) {
-    int res;
-    printk(KERN_WARNING "===usbcam_INIT: registering usb device with usbcore\n");
-    res = usb_register(&usbcam_driver);
-    if(res)
-        printk(KERN_ERR "===usbcam_INIT: ERROR registering USB device %d\n", res);
-    else
-        printk(KERN_WARNING "===usbcam_INIT: device registered with return value: %d\n", res);
-
-    return 0;
+    int rv;
+    rv = usb_register(&usbcam_driver);
+    if(rv) {
+        printk(KERN_ERR "===usbcam_INIT: ERROR registering USB device %d\n", rv);
+        return rv;
+    }
+    else{
+        printk(KERN_WARNING "===usbcam_INIT: Device succesfully registered with USBCORE\n");
+        return 0;
+    }
 }
 
 static void __exit usbcam_exit(void) {
