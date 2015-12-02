@@ -16,17 +16,6 @@
 #include "usbcam.h"
 #include "dht_data.h"
 
- /*
-1) ouvrir le fichier dans lequel vous enregistrerez l’image
-2) Effectuer la commande IOCTL_STREAMON
-3) Effectuer la commande IOCTL_GRAB
-4) Utiliser la commande read du pilote pour récupérer les données de l’image
-5) Effectuer la commande IOCTL_STREAMOFF
-6) Effectuer les modifications sur les données (voir exemple plus bas)
-7) Écrire le résultat final dans le fichier ouvert à l’étape #1
-8) Fermer le fichier ouvert à l’étape #1
- */
-
 #define USBCAM_IMAGE 		"usbcam_image.jpg"
 #define USBCAM_DEVICE 		"/dev/usbcam1"
 #define USBCAM_BUF_SIZE		42666
@@ -65,7 +54,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=UP, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 0);
-                    sleep(0.1);
+                    sleep(0.2);
 			    }
                 sleep(1);
                 break;
@@ -74,7 +63,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=DOWN, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 1);
-                    sleep(0.1);
+                    sleep(0.2);
 			    }
                 sleep(1);
                 break;
@@ -83,7 +72,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=LEFT, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 2);
-                    sleep(0.1);
+                    sleep(0.2);
 			    }
                 sleep(1);
                 break;
@@ -92,7 +81,7 @@ int main(int argc, char *argv[]) {
                 printf("PANTILT: DIR=RIGHT, VALUE=%i\n", PANTILT_MAX);
 			    for(i=0; i<PANTILT_MAX; i++) {
 					ioctl(fd, IOCTL_PANTILT, 3);
-                    sleep(0.1);
+                    sleep(0.2);
 			    }
                 sleep(1);
                 break;
