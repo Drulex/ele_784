@@ -503,7 +503,7 @@ int urbInit(struct usb_interface *intf, struct USBCam_Dev *cam_dev) {
         // initializing isochronous urb by hand
         printk(KERN_WARNING "===usbcam_urbInit: initializing isochronous urb: %d\n", i);
         cam_dev->myUrb[i]->dev = cam_dev->usbdev;
-        cam_dev->myUrb[i]->context = cam_dev; // *dev* ?? // check struct void*?
+        cam_dev->myUrb[i]->context = cam_dev;
         cam_dev->myUrb[i]->pipe = usb_rcvisocpipe(cam_dev->usbdev, endpointDesc.bEndpointAddress);
         cam_dev->myUrb[i]->transfer_flags = URB_ISO_ASAP | URB_NO_TRANSFER_DMA_MAP;
         cam_dev->myUrb[i]->interval = endpointDesc.bInterval;
@@ -515,11 +515,12 @@ int urbInit(struct usb_interface *intf, struct USBCam_Dev *cam_dev) {
             cam_dev->myUrb[i]->iso_frame_desc[j].offset = j * myPacketSize;
             cam_dev->myUrb[i]->iso_frame_desc[j].length = myPacketSize;
         }
+    }
 
     for(i = 0; i < nbUrbs; i++) {
         rv = usb_submit_urb(cam_dev->myUrb[i], GFP_ATOMIC);
 
-        if (rv < 0) {
+        if(rv < 0) {
             printk(KERN_ERR "===usbcam_URBINIT: ERROR submitting URB: %i\n", rv);
             return rv;
         }
@@ -597,7 +598,6 @@ static void urbCompletionCallback(struct urb *urb) {
             }
         }
     }
-    else {
+    else
         printk(KERN_ERR "===usbcam_CALLBACK: ERROR completing urb: %i\n", urb->status);
-    }
 }
