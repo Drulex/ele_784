@@ -70,6 +70,7 @@ static unsigned int myStatus = 0;
 static unsigned int myLength = 42666;
 static unsigned int myLengthUsed = 0;
 static char myData[42666];
+atomic_t open_count;
 
 
 static struct usb_device_id usbcam_table[] = {
@@ -109,7 +110,7 @@ static int __init usbcam_init(void) {
     int rv;
     rv = usb_register(&usbcam_driver);
     if(rv) {
-        printk(KERN_ERR "===usbcam_INIT: ERROR registering USB device %d\n", rv);
+        printk(KERN_ERR "===usbcam_INIT: ERROR registering USB device; code=%d\n", rv);
         return rv;
     }
     else{
@@ -119,7 +120,7 @@ static int __init usbcam_init(void) {
 }
 
 static void __exit usbcam_exit(void) {
-    printk(KERN_WARNING "===usbcam_EXIT: deregistering usb device\n");
+    printk(KERN_WARNING "===usbcam_EXIT: Deregistering usb device\n");
     usb_deregister(&usbcam_driver);
 }
 
@@ -172,16 +173,13 @@ static int usbcam_probe (struct usb_interface *intf, const struct usb_device_id 
         sema_init(&cam_dev->sem_grab, 0);
         cam_dev->urbCounter = (atomic_t) ATOMIC_INIT(0);
         cam_dev->urb_done = (struct completion *) kmalloc(sizeof(struct completion), GFP_KERNEL);
+        open_count = (atomic_t) ATOMIC_INIT(0);
         init_completion(cam_dev->urb_done);
         printk(KERN_WARNING "===usbcam_PROBE: Done probe routine\n");
+
         for(i=0; i<5; i++) {
             cam_dev->myUrb[i] = NULL;
-            //usb_free_urb(cam_dev->myUrb[i]);
         }
-        for(i=0; i<42666; i++) {
-            myData[i] = '\0';
-        }
-
         usb_set_interface(cam_dev->usbdev, 1, 4);
         return 0;
     }
@@ -198,37 +196,43 @@ void usbcam_disconnect(struct usb_interface *intf) {
 }
 
 int usbcam_open (struct inode *inode, struct file *filp) {
-
     struct usb_interface *intf;
-    int subminor;
+    int subminor, count;
 
-    printk(KERN_WARNING "===usbcam_OPEN: Opening usbcam driver in READONLY MODE!\n");
+    // only allow 1 open at a time
+    count = (int) atomic_read(&open_count);
+    if(!count) {
+        atomic_inc(&open_count);
+        subminor = iminor(inode);
+        intf = usb_find_interface(&usbcam_driver, subminor);
 
-    subminor = iminor(inode);
+        if(!intf) {
+            printk(KERN_WARNING "===usbcam_OPEN: Unable to open device driver\n");
+            return -ENODEV;
+        }
+        printk(KERN_WARNING "===usbcam_OPEN: Opening usbcam driver in READONLY MODE!\n");
 
-    intf = usb_find_interface(&usbcam_driver, subminor);
-
-    if(!intf) {
-    	printk(KERN_WARNING "===usbcam_OPEN: Unable to open device driver\n");
-    	return -ENODEV;
+        // copy interface inside private_data
+        filp->private_data = intf;
+        return 0;
     }
-
-    filp->private_data = intf;
-    return 0;
+    else
+        return -EBUSY;
 }
 
 int usbcam_release (struct inode *inode, struct file *filp) {
+    // reset open counter
+    atomic_set(&open_count, 0);
+
     switch(filp->f_flags & O_ACCMODE) {
         case O_RDONLY:
             printk(KERN_WARNING "===usbcam_RELEASE: Releasing usbcam driver in from READONLY MODE!\n");
-            break;
+            return 0;
 
         default:
             printk(KERN_WARNING "===usbcam_RELEASE: UNKNOWN RELEASE MODE!\n");
             return -ENOTTY;
-            break;
     }
-    return 0;
 }
 
 ssize_t usbcam_read (struct file *filp, char __user *ubuf, size_t count, loff_t *f_ops) {
