@@ -295,56 +295,38 @@ ssize_t usbcam_write (struct file *filp, const char __user *ubuf, size_t count, 
 }
 
 long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
-    printk(KERN_WARNING "===usbcam_IOCTL: entering IOCTL function\n");
     char cam_pos[4];
-    int retcode;
+    int rv;
     int pantilt = 0x03;
     struct usb_interface *intf = filp->private_data;
     struct USBCam_Dev *cam_dev = usb_get_intfdata(intf);
 
-    //NOTE let's not forget to add access protection in this function!
-
-    // prototype of usb_control_msg
-    /*
-    int usb_control_msg (struct usb_device * dev,
-    unsigned int pipe,
-    __u8 request,
-    __u8 requesttype,
-    __u16 value,
-    __u16 index,
-    void * data,
-    __u16 size,
-    int timeout);
-    */
-
     switch(cmd) {
-
         case IOCTL_GET:
             if(arg == GET_CUR || arg == GET_MIN || arg == GET_MAX || arg == GET_RES) {
-                retcode = usb_control_msg(cam_dev->usbdev,
+                rv = usb_control_msg(cam_dev->usbdev,
                                 usb_rcvctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                                 arg,
                                 (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
                                 0,
                                 0x0200,
-                                //&data,
                                 NULL, // use this for now.
                                 2,
                                 0);
-                if(retcode < 0) {
-                    printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_GET! code %i\n", retcode);
-                    return retcode;
+
+                if(rv < 0) {
+                    printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_GET! code %i\n", rv);
+                    return rv;
                 }
                 break;
             }
-            else{
+            else {
                 printk(KERN_ERR "===usbcam_IOCTL_get: ERROR arg is invalid! %s:%s:%u)\n", __FILE__, __FUNCTION__, __LINE__);
                 return -EFAULT;
             }
 
-
         case IOCTL_SET:
-            retcode = usb_control_msg(cam_dev->usbdev,
+            rv = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x01,
                             (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
@@ -353,15 +335,15 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             arg,
                             2,
                             0);
-            if(retcode < 0) {
-                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_SET! code %i\n", retcode);
-                return retcode;
-                }
+            if(rv < 0) {
+                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_SET! code %i\n", rv);
+                return rv;
+            }
             break;
 
         case IOCTL_STREAMON:
             printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_STREAMON\n");
-            retcode = usb_control_msg(cam_dev->usbdev,
+            rv = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x0B,
                             (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
@@ -370,9 +352,9 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             NULL,
                             0,
                             0);
-            if(retcode < 0) {
-                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMON! code %i\n", retcode);
-                return retcode;
+            if(rv < 0) {
+                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMON! code %i\n", rv);
+                return rv;
             }
             // release sem_grab
             up(&cam_dev->sem_grab);
@@ -380,7 +362,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
 
         case IOCTL_STREAMOFF:
             printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_STREAMOFF\n");
-            retcode = usb_control_msg(cam_dev->usbdev,
+            rv = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x0B,
                             (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE),
@@ -389,17 +371,17 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             NULL,
                             0,
                             0);
-            if(retcode < 0) {
-                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", retcode);
-                return retcode;
+            if(rv < 0) {
+                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_STREAMOFF! code %i\n", rv);
+                return rv;
             }
             break;
 
         case IOCTL_GRAB:
             printk(KERN_WARNING "===usbcam_IOCTL: Entering IOCTL_GRAB\n");
-            if (down_trylock(&cam_dev->sem_grab)) {
+            if(down_trylock(&cam_dev->sem_grab)) {
                 printk(KERN_WARNING "===usbcam_IOCTL: sem_grab not available. Exiting!\n");
-                return -ENOEXEC;
+                return -EBUSY;
             }
             urbInit(intf, cam_dev);
             // release sem_read
@@ -442,7 +424,7 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                     break;
             }
             //send actual usb_control_msgs
-            retcode = usb_control_msg(cam_dev->usbdev,
+            rv = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x01,
                             (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
@@ -451,14 +433,14 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             &cam_pos,
                             4,
                             0);
-            if(retcode < 0) {
-                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT! code %i\n", retcode);
-                return retcode;
+            if(rv < 0) {
+                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT! code %i\n", rv);
+                return rv;
             }
             break;
 
         case IOCTL_PANTILT_RESET:
-            retcode = usb_control_msg(cam_dev->usbdev,
+            rv = usb_control_msg(cam_dev->usbdev,
                             usb_sndctrlpipe(cam_dev->usbdev, cam_dev->usbdev->ep0.desc.bEndpointAddress),
                             0x01,
                             (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE),
@@ -467,9 +449,9 @@ long usbcam_ioctl (struct file *filp, unsigned int cmd, unsigned long arg) {
                             &pantilt,//0x03,
                             1,
                             0);
-            if(retcode < 0) {
-                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", retcode);
-                return retcode;
+            if(rv < 0) {
+                printk(KERN_ERR "===usbcam_IOCTL: ERROR something went wrong during IOCTL_PANTILT_RESET! code %i\n", rv);
+                return rv;
             }
             break;
 
