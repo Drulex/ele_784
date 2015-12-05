@@ -1,1 +1,29 @@
 ELE784 - Lab2 USB Driver kernel
+======================================
+(this file does not use markdown formatting)
+
+
+To compile the project:
+=======================
+    1. make usbcam (for usbcam kernel module only)
+    2. make usbcam_test (for user app only)
+    3. make all (for both)
+    4. make clean (to clean build)
+
+
+Project directory structure:
+============================
+.
+├── README (this file)
+└── src
+    ├── usbcam.c (source code for driver)
+    ├── usbcam.h (header file)
+    ├── dht_data.h (some jpg header constants)
+    ├── usbvideo.h (some USB constants)
+    ├── Makefile
+    └── usbcam_test.c (user application)
+
+Known bugs and limitation:
+==========================
+    1. Run test app as ROOT!
+    2. Image captured is created in src folder.
